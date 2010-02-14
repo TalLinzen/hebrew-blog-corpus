@@ -1,18 +1,14 @@
 # b = BGUTagger('0.hr', FromNumberedSet, {'numbers': create_set('ht0_pd_at')})
 # b.load_file()
 
-annotations = '/Users/tal/University/PD/annotations'
 try:
     from pyExcelerator import *
 except ImportError:
     pass
 
-import rlcompleter
 import os
-import readline
 
 from transliterator import Transliterator
-import cPickle
 from parse_hspell import parse_hspell
 
 class SentenceGroup(object):
