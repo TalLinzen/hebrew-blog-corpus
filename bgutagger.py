@@ -324,21 +324,6 @@ class BGUTagger(object):
                 self.sentence_group.sentences.append(this_sentence)
 
 
-    def write_to_file(self,  start=0, end=-1, title='DefaultTitle'):
-
-        f = open('/tmp/for_annotation', 'w')
-        self.sentence_group.title = title
-        self.sentence_group.sentences = self.sentence_group.sentences[start:end]
-        for sentence in self.sentence_group.sentences:
-            ttt = []
-            for w in sentence.words:
-                trans = self.t.reverse_translate(w[0])
-                if trans != '' and w[0][-1] in 'kmnpc':
-                    trans = trans[:-1] + chr(ord(trans[-1]) - 1)
-                ttt.append(trans)
-            sentence.hebrew_repr = ' '.join(ttt) + '\n'
-        cPickle.dump(self.sentence_group, f)
-
 def write_to_file2(sentences, filename='annotation.xls'):
 
     t = Transliterator()
@@ -392,42 +377,3 @@ def write_to_file2(sentences, filename='annotation.xls'):
         ws.write(i, 5, str(sentence.index))
 
     w.save(filename)
-
-def count_to_latex(count):
-
-    s = []
-    for key in sorted(count.keys()):
-        d = count[key]
-        past, beinoni, future = [d.get(x, 0) for x in ('PAST', 'A', 'FUTURE')]
-        s.append(r"\textsl{%s} `%s' & %d & %d & %d & %.1f\%% & %.1f\%%\\" % (key[1], key[2], past, beinoni, future, 100 * float(beinoni) / (beinoni + past), 100 * float(beinoni) / (beinoni + past + future)))
-    return '\n'.join(s)
-
-
-def word_after_verb(bgutagger):
-    return [s.words[s.relevant_verb_indices[0]+1][0] for s in bgutagger.sentence_group.sentences]
-
-def possessive_shel(bgutagger):
-    ret = []
-    for s in bgutagger.sentence_group.sentences:
-        if s.words[s.relevant_shel[0]][0] == 'Sl':
-            ret.append(s.words[s.relevant_shel[0]+1][0])
-        else:
-            ret.append(s.words[s.relevant_shel[0]][0])
-    return ret
-
-def possessive_et(bgutagger):
-    return [s.words[s.relevant_et[0]+1][0] for s in bgutagger.sentence_group.sentences]
-
-l_pronouns = ['li', 'lk', 'lw', 'lh', 'lnw', 'lhm', 'lhn', 'lkn', 'lkm']
-shel_pronouns = ['S' + x for x in l_pronouns]
-
-def count_body_parts(l):
-    from tools import mifkad
-    bp = ['id', 'idiim', 'rgl', 'rgliim', 'raS', 'Ain', 'Ainiim', 'awzn', 'awzniim', 'bTn', 'acbA', 'acbAwt', 'lb', 'mwx', 'gwp', 'pnim', 'siAr', 'siArwt']
-    #bp += ['tht', 'zin', 'cicim', 'xzh', 'Sdiim']
-    bp = set(bp + ['h' + q for q in bp])
-    bp_count = 0
-    for key, value in mifkad(l).items():
-        if key in bp:
-            bp_count += value
-    return bp_count 
