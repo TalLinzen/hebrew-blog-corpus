@@ -1,8 +1,9 @@
-import re, datetime
+import re
+from datetime import datetime
 from .tools.httptools import FirefoxRequest
 from .db import WebPage
 
-class IsrablogUsersHarvester(object):
+class IsrablogHarvester(object):
 
     blog_id_re = re.compile(r'blog=(\d+)')
     next_pages_re = re.compile(r'http://isralog.nana10.co.il/.*?pagenum=.*?\b')
@@ -56,13 +57,14 @@ class IsrablogUsersHarvester(object):
 
         for url in all_sub_urls:
 
-            if len(WebPage.select(WebPage.q.url == url)) > 0:
+            if len(list(WebPage.select(WebPage.q.url == url))) > 0:
                 print '%s already ripped' % url
             else:
                 req = FirefoxRequest(url)
                 req.read()
                 WebPage(site='israblog', clean_text='', url=url,
-                        accessed=datetime.now(), raw=req.html)
+                        accessed=datetime.now(), raw=req.html.decode('cp1255'),
+                        age=None, user=None, sex=None)
 
 
     def rip_many(self, how_many):

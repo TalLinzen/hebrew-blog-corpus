@@ -1,5 +1,5 @@
 import sys, traceback
-from transliterator import Transliterator
+from tools.transliterator import Transliterator
 
 sqlobjectegg = '/Library/Frameworks/Python.framework/Versions/2.5/lib/python2.5/site-packages/SQLObject-0.10.2-py2.5.egg' 
 if sqlobjectegg not in sys.path: 
@@ -11,8 +11,8 @@ from sqlobject import *
 class WebPage(SQLObject):
 
     url = StringCol()
-    clean_text = StringCol()
-    raw = StringCol()
+    clean_text = StringCol() # UnicodeCol(dbEncoding='utf8')
+    raw = StringCol() # UnicodeCol(dbEncoding='cp1255')
     accessed = DateTimeCol()
     site = StringCol()
     age = IntCol()
@@ -26,10 +26,11 @@ class User(SQLObject):
     sex = StringCol(length=10)
     number_index = DatabaseIndex('number')
 
-def setup_connection():
+def setup_connection(password):
 
-    connection_string = 'mysql://root:@localhost/corpus'
+    connection_string = 'mysql://root:%s@localhost/corpus' % password
     connection = connectionForURI(connection_string)
+    #connection.dbEncoding = 'utf8'
     sqlhub.processConnection = connection
 
 def insistent_db_op(func, *args, **kwargs):
