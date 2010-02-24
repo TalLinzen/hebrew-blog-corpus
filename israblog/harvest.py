@@ -63,7 +63,7 @@ class IsrablogHarvester(object):
                 req = FirefoxRequest(url)
                 req.read()
                 WebPage(site='israblog', clean_text='', url=url,
-                        accessed=datetime.now(), raw=req.html.decode('cp1255'),
+                        accessed=datetime.now(), raw=req.html,
                         age=None, user=None, sex=None)
 
 

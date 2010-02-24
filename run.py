@@ -1,5 +1,5 @@
 from db import setup_connection, WebPage, User
-from israblog.clean import IsrablogCleaner, ExtractText
+from israblog.clean import IsrablogCleaner
 from israblog.harvest import IsrablogHarvester
 from pdb import pm
 import codecs
@@ -14,7 +14,7 @@ def pheb(s):
     print '\n'.join(p)
 
 def dump(s):
-    codecs.open('/tmp/t.html', 'w', 'utf16').write(s.clean_text.decode('utf8').replace('\n\n', '<br>'))
+    codecs.open('/tmp/t.html', 'w', 'utf16').write(s.clean_text.decode('utf8').replace('\n', '<br>'))
     codecs.open('/tmp/r.html', 'w', 'utf16').write(s.raw.decode('cp1255'))
 
 def pheb2(s):
