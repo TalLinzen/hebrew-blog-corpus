@@ -45,6 +45,8 @@ class IsrablogHarvester(object):
         req = FirefoxRequest('http://israblog.nana10.co.il/random.asp')
         req.read()
         blog_id = self.blog_id_re.search(req.url).group(1)
+#        if len(list(WebPage.select(WebPage.q.user == int(blog_id)))) > 0:
+#            print 'User %s already ripped' % blog_id
 
         period_urls = self.extract_period_urls(req)
         all_sub_urls = []

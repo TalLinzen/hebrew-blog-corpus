@@ -18,6 +18,7 @@ class WebPage(SQLObject):
     age = IntCol()
     user = StringCol()
     sex = StringCol()
+    analyzed = StringCol()
 
 class User(SQLObject):
 

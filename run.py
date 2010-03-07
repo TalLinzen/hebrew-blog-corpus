@@ -1,5 +1,5 @@
 from db import setup_connection, WebPage, User
-from israblog.clean import IsrablogCleaner
+from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
 from pdb import pm
 import codecs
@@ -20,8 +20,5 @@ def dump(s):
 def pheb2(s):
     print deu(s.decode('utf-8')).decode('cp1255')
 
-def deu(s):
-    return ''.join(chr(ord(x)) for x in s)
-
-def u(s):
-    return ''.join(unichr(ord(x)) for x in s)
+def age_histogram():
+    return WebPage._connection.queryAll('select age, count(*) from user group by age')

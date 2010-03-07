@@ -2,6 +2,7 @@ import re, os, types, sys
 import lxml.html, lxml.etree
 from .db import WebPage, User
 from HTMLParser import HTMLParser, HTMLParseError
+from subprocess import Popen, PIPE
 
 class HTMLToText(HTMLParser):
 
@@ -47,12 +48,10 @@ class IsrablogCleaner(object):
             s = HTMLToText()
             s.feed(as_string)
             normalized = re.sub('[\r\n\xa0][\r\n\xa0 ]+', '\n', s.text)
-            print repr(normalized)
             text.append(normalized)
         object.clean_text = '\n---------\n'.join(text).decode('cp1255').encode('utf8')
 
-    def fill_age_and_sex(object):
-        # http://www.ascii.ca/cp1255.htm
+    def fill_age_and_sex(self, object):
         age_match = self.age_regexp.search(object.raw)
         if age_match:
             object.age = int(age_match.group(2))
@@ -67,7 +66,7 @@ class IsrablogCleaner(object):
                 else:
                     print 'Weird sex:', sex_match.group(1)
 
-    def fill_user(object):
+    def fill_user(self, object):
         match = self.url_user_regexp.search(object.url)
         object.user = match.group(1)
 
@@ -82,12 +81,16 @@ class IsrablogCleaner(object):
             objects = WebPage.select("id >= %d and id < %d" % (i, i + 1000))
             for object in objects:
                 for function in functions:
+                    if type(function) == tuple:
+                        function, args = function
+                    else:
+                        args = ()
                     try:
-                        function(object)
+                        function(object, *args)
                     except Exception, exc:
                         print '%d: major exc, giving up: %s' % (object.id, str(exc)[:200])
 
-    def fill_user_table(self, out_dir):
+    def fill_user_table(self):
         User.dropTable()
         User.createTable()
         users = User._connection.queryAll('select distinct user from web_page')
@@ -105,7 +108,52 @@ class IsrablogCleaner(object):
             posts = User._connection.queryAll(
                     "select clean_text from web_page where user = '%s'" % user)
             posts = '\n'.join(x[0] for x in posts)
-            open(os.join.path(out_dir, user), 'w').write(posts)
             User(number=user, age=age, sex=sex)
-            
 
+    def count_tokens(self, object):
+        if not hasattr(self, 'tokens'):
+            self.tokens = 0
+
+        for char in object.clean_text:
+            if char == ' ' or char == '\n':
+                self.tokens += 1
+
+    word_in_english = re.compile(r'([A-Za-z]+)')
+    character = re.compile(r'([\)\("-])')
+    def prepare_for_tokenizer(self, string):
+        '''
+        Surround every word in Latin script with spaces, workaround for
+        tokenizer bug
+        '''
+        string = self.word_in_english.sub(r' \1 ', string)
+        string = self.character.sub(r' \1 ', string)
+        return string
+    
+    def dump_to_files(self, object, dir='/home/tal/corpus_dumps'):
+        thousand_dir = os.path.join(dir, str(object.id // 1000))
+        if not os.path.isdir(thousand_dir):
+            os.mkdir(thousand_dir)
+        filename = os.path.join(thousand_dir, str(object.id))
+        open(filename, 'w').write(self.prepare_for_tokenizer(object.clean_text))
+    
+    def load_back_from_files(self, object):
+        thousand_dir = os.path.join(dir, str(object.id // 1000))
+        f = '/home/tal/analyzed_corpus/%d/%d' % (thousand_dir, object.id)
+        if os.path.exists(f):
+            object.analyzed = open(f).read()
+
+def run_morph_analyzer(start, end):
+    '''
+    start and end are in a scale of thousands: 4 means 4000-4999
+    '''
+    previous_dir = os.getcwd()
+    os.chdir('/home/tal/tagger')
+    for i in range(start, end):
+        os.system('rm -rf /home/tal/analyzed_corpus/%d' % i)
+        os.mkdir(os.path.join('/home/tal/analyzed_corpus', str(i)))
+        command = 'java -Xmx1200m -XX:MaxPermSize=256m -cp trove-2.0.2.jar:morphAnalyzer.jar:opennlp.jar:gnu.jar:chunker.jar:splitsvm.jar:duck1.jar:tagger.jar vohmm.application.BasicTagger /home/tal/tagger/ /home/tal/corpus_dumps/%d/ /home/tal/analyzed_corpus/%d/ -lemma -tokenfeat -chunk' % (i, i)
+        print command
+        p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
+        print 'STDOUT:', p.stdout.read()
+        print 'STDERR:', p.stderr.read()
+    os.chdir(previous_dir)
