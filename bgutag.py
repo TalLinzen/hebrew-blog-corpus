@@ -1,4 +1,5 @@
 import codecs
+import os
 
 class Masks(object):
 
@@ -16,7 +17,7 @@ class Masks(object):
         'particle':          0X00000000000B0000, # not used
         #'auxverb':           0X00000000000C0000, # not used
         'verb':              0X00000000000D0000,
-        'puncuation':        0X00000000000E0000,
+        'punctuation':       0X00000000000E0000,
         'interrogative':     0X00000000000F0000,
         'interjection':      0X0000000000100000,
         'unknown':           0X0000000000110000,
@@ -201,7 +202,14 @@ class BGUWord(object):
     @classmethod
     def from_tokenfeat(cls, declaration, line):
         word = cls()
-        for feature, value in zip(declaration, line.split()):
+        splitted_line = line.split()
+        if len(declaration) < len(splitted_line):
+            print len(declaration), len(splitted_line)
+            print line.encode('utf8')
+            global q
+            q = line
+            return None
+        for feature, value in map(None, declaration, splitted_line):
             value = cls.special_values.get(value, value)
             setattr(word, feature, value)
         return word
@@ -224,15 +232,21 @@ class BGUSentence(object):
     def __init__(self, words):
         self.words = words
 
-    def pprint(self):
-        for word in self.words:
-            if word.word:
-                reversed_words.append(''.join(reversed(word.word)))
-        if reversed_words:
-            print ' '.join(reversed(reversed_words))
+    def pprint(self, reverse=False):
+        if reverse:
+            reversed_words = []
+            for word in self.words:
+                if word.word:
+                    reversed_words.append(''.join(reversed(word.word)))
+            if reversed_words:
+                print ' '.join(reversed(reversed_words)).encode('utf8')
+            else:
+                print
         else:
-            print
-
+            if self.words:
+                print ' '.join(w.word for w in self.words).encode('utf8')
+            else:
+                print
 
 class BGUFile(object):
 
@@ -258,6 +272,15 @@ class BGUFile(object):
                 analysis = int(analysis)
                 words.append(BGUWord.from_bitmask(word, analysis, lemma))
             else:
-                words.append(BGUWord.from_tokenfeat(self.declaration, line))
+                word = BGUWord.from_tokenfeat(self.declaration, line)
+                if word is not None:
+                    words.append(word)
             line = self.file.readline().strip()
         return BGUSentence(words)
+
+def BGUDir(directory):
+
+    for filename in os.listdir(directory):
+        if filename[0] != '.':
+            for sentence in BGUFile(os.path.join(directory, filename)):
+                yield sentence
