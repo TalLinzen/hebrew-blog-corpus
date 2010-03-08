@@ -27,8 +27,8 @@ class IsrablogCleaner(object):
 
     def __init__(self):
         object.__init__(self)
-        self.age_regexp = re.compile(r'<b>(\xe1[\xef\xfa]):</b>\xa0(\d+)')   # b[nt] (ben/bat)
-        self.sex_regexp = re.compile(r'<b>\xee\xe9\xef:</b>\xa0(.*?)<br>')   # min
+        self.age_regexp = re.compile(r'<b>(\xe1[\xef\xfa]):</b>\xa0(\d+)') # b[nt] (ben/bat)
+        self.sex_regexp = re.compile(r'<b>\xee\xe9\xef:</b>\xa0(.*?)<br>') # min
         self.url_user_regexp = re.compile(r'blog=(\d+)')
 
     def new_clean(self, object):
@@ -49,7 +49,8 @@ class IsrablogCleaner(object):
             s.feed(as_string)
             normalized = re.sub('[\r\n\xa0][\r\n\xa0 ]+', '\n', s.text)
             text.append(normalized)
-        object.clean_text = '\n---------\n'.join(text).decode('cp1255').encode('utf8')
+        object.clean_text = '\n---------\n'.join(text).decode('cp1255').\
+                encode('utf8')
 
     def fill_age_and_sex(self, object):
         age_match = self.age_regexp.search(object.raw)
@@ -72,7 +73,8 @@ class IsrablogCleaner(object):
 
     def run_on_many(self, functions, start=0, end=None):
         if end is None:
-            end = WebPage._connection.queryAll('select max(id) from web_page')[0][0]
+            end = WebPage._connection.\
+                    queryAll('select max(id) from web_page')[0][0]
             print 'total:', end
         if not isinstance(functions, list):
             functions = [functions]
@@ -88,7 +90,8 @@ class IsrablogCleaner(object):
                     try:
                         function(object, *args)
                     except Exception, exc:
-                        print '%d: major exc, giving up: %s' % (object.id, str(exc)[:200])
+                        print '%d: major exc, giving up: %s' % \
+                                (object.id, str(exc)[:200])
 
     def fill_user_table(self):
         User.dropTable()
@@ -98,15 +101,15 @@ class IsrablogCleaner(object):
         for i, user in enumerate(users):
             print i, user
             ages = User._connection.queryAll(
-                    "select distinct age from web_page where user = '%s'" % user)
+                    "select distinct age from web_page where user='%s'" % user)
             potential_age = [y[0] for y in ages if y[0] != None]
             age = potential_age[0] if len(potential_age) != 0 else None
             sexes = User._connection.queryAll(
-                    "select distinct sex from web_page where user = '%s'" % user)
+                    "select distinct sex from web_page where user='%s'" % user)
             potential_sex = [y[0] for y in sexes if y[0] != None]
             sex = potential_sex[0] if len(potential_sex) != 0 else None
             posts = User._connection.queryAll(
-                    "select clean_text from web_page where user = '%s'" % user)
+                    "select clean_text from web_page where user='%s'" % user)
             posts = '\n'.join(x[0] for x in posts)
             User(number=user, age=age, sex=sex)
 
@@ -127,6 +130,7 @@ class IsrablogCleaner(object):
         '''
         string = self.word_in_english.sub(r' \1 ', string)
         string = self.character.sub(r' \1 ', string)
+        string = string.replace('\xa0', ' ')
         return string
     
     def dump_to_files(self, object, dir='/home/tal/corpus_dumps'):
