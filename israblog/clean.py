@@ -78,7 +78,7 @@ class IsrablogCleaner(object):
             functions = [functions]
         for i in range(start, end, 1000):
             print i
-            objects = WebPage.select("id >= %d and id < %d" % (i, i + 1000))
+            objects = WebPage.select("id >= %d and id < %d" % (i, min(end, i + 1000)))
             for object in objects:
                 for function in functions:
                     if type(function) == tuple:
@@ -137,7 +137,7 @@ class IsrablogCleaner(object):
         open(filename, 'w').write(self.prepare_for_tokenizer(object.clean_text))
     
     def load_back_from_files(self, object):
-        thousand_dir = os.path.join(dir, str(object.id // 1000))
+        thousand_dir = object.id // 1000
         f = '/home/tal/analyzed_corpus/%d/%d' % (thousand_dir, object.id)
         if os.path.exists(f):
             object.analyzed = open(f).read()
