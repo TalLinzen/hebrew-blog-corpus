@@ -2,26 +2,27 @@
 
 from filter import Filter
 
+interesting_verbs = u'אכל'
+
 class SubcategorizationFrames(Filter):
 
-    nonclitic_prepositions = set([
-        u'עם',
-        u'על',
-        u'אל',
-        u'מן',
-        u'אצל',
-        u'ע"י',
-        u'מפני',
-        u'בפני',
-        u'אחרי'
-    ])
+    nonclitic_prepositions = {
+        u'עם': 'im',
+        u'על': 'al',
+        u'אל': 'el',
+        u'מן': 'min',
+        u'אצל': 'etsel',
+        u'מפני': 'mipnei',
+        u'בפני': 'bifnei',
+        u'אחרי': 'achrei'
+    }
 
-    clitic_prepositions = set([
-        u'ל',
-        u'ב',
-        u'כ',
-        u'מ'
-    ])
+    clitic_prepositions = {
+        u'ל': 'le',
+        u'ב': 'be',
+        u'כ': 'ke',
+        u'מ': 'me'
+    }
 
     question_words = set([
         u'אם',
@@ -63,7 +64,7 @@ class SubcategorizationFrames(Filter):
         self.interesting_verbs = interesting_verbs
 
     def process(self, sentence):
-        self.current_sentence = sentence
+        self.sentence = sentence
         self.verb_index = -10
         self.argument = 'UNKNOWN'
         self.potential_argument_zone = False
@@ -81,7 +82,7 @@ class SubcategorizationFrames(Filter):
                 break
 
     def argument_found(self, kind):
-        self.argument = kind
+        self.sentence.argument = kind
         self.potential_argument_zone = False
         self.stop = True
 
@@ -92,13 +93,13 @@ class SubcategorizationFrames(Filter):
         #    lemma, analysis, base_form, named_entity, np_chunk = ('ali', ['', 'IN', ''], 'al', 'O', 'O')
 
         is_verb = word.pos in ('verb', 'participle', 'modal')
-        #includes_conj = analysis[1].startswith('CONJ') or analysis[0].startswith('CONJ')
+        includes_conj = word.pos == 'conjunction'
         is_rel = word.prefix == 'rel-subconj' and \
                 self.last_preposition_index != index - 1
         is_punc = word.pos == 'punctuation'
         is_question = word.pos == 'interrogative' \
                 or word.lemma in self.question_words
-        is_infinitive = word.tense == 'toinfinitive'
+        is_infinitive = word.person == 'inf'   # HACK! Should be word.tense
         is_np_chunk = word.chunk in ('B-NP', 'I-NP') or word.pos == 'noun' 
         # Originally: analysis[1].startswith('NN'), makes any difference?
         is_pronoun = word.pos == 'pronoun'
@@ -133,12 +134,10 @@ class SubcategorizationFrames(Filter):
             # always happen. but is this ever an actual problem?
 
         if not self.potential_argument_zone and is_verb:
-            if word.lemma in self.interesting_verbs and \
-                    self.global_counter is not None:
+            if word.lemma in self.interesting_verbs:
                 self.counters[word.lemma] = self.counters.get(word.lemma, 0) + 1
             self.verb_index = index
-            if self.dicts and \
-                    self.counters.get(word.lemma, 0) >= self.max_tokens:
+            if self.counters.get(word.lemma, 0) >= self.max_tokens:
                 self.stop = True
                 return
             self.verb = word.lemma
@@ -147,9 +146,8 @@ class SubcategorizationFrames(Filter):
             if word.lemma in self.interesting_verbs:
                 self.good_sentence = True
                 self.potential_argument_zone = True
-                if self.dicts is not None:
-                    l = self.dicts.setdefault(word.lemma, [])
-                    l.append(self.current_sentence)
+                l = self.dicts.setdefault(word.lemma, [])
+                l.append(self.sentence)
 
         else:
             if self.potential_argument_zone:
@@ -172,19 +170,19 @@ class SubcategorizationFrames(Filter):
                 elif is_np_chunk:
 
                     preposition = None
-                    if word.prefix in self.clitic_preposition:
-                        preposition = word.prefix
+                    if word.prefix in self.clitic_prepositions:
+                        preposition = self.clitic_prepositions[word.prefix]
                     elif word.pos == 'at-preposition' and \
                             word.base in self.at_comitative_forms:
                         preposition = u'עם'
                     elif word.pos == 'preposition' and \
                             word.lemma in self.nonclitic_prepositions:
-                        preposition = word.lemma
+                        preposition = self.nonclitic_prepositions[word.lemma]
                     elif self.last_preposition_index == index - 1:
                         preposition = self.last_preposition
 
-                    if preposition == u'מן':
-                        preposition = u'מ'
+                    if preposition == 'min':
+                        preposition = 'me'
 
                     if preposition:
                         self.argument_found(u'PP-%s' % preposition)
@@ -193,7 +191,7 @@ class SubcategorizationFrames(Filter):
                         # If definite, needs "at"
                         if word.lemma == u'הוא' and \
                                 word.pos != 'at-preposition' or \
-                                analysis[0] == 'DEF' and \
+                                getattr(word, 'def') and \
                                 word.base not in (u'הכל', u'הכול'):
                             self.ended_without_determined_object(index)
                         else:

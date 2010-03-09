@@ -204,11 +204,8 @@ class BGUWord(object):
         word = cls()
         splitted_line = line.split()
         if len(declaration) < len(splitted_line):
-            print len(declaration), len(splitted_line)
-            print line.encode('utf8')
-            global q
-            q = line
-            return None
+            raise ValueError('Declaration too short to parse line: %s' % \
+                    line.encode('utf8'))
         for feature, value in map(None, declaration, splitted_line):
             value = cls.special_values.get(value, value)
             setattr(word, feature, value)

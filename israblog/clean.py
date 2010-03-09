@@ -31,7 +31,7 @@ class IsrablogCleaner(object):
         self.sex_regexp = re.compile(r'<b>\xee\xe9\xef:</b>\xa0(.*?)<br>') # min
         self.url_user_regexp = re.compile(r'blog=(\d+)')
 
-    def new_clean(self, object):
+    def clean(self, object):
         s = lxml.html.fromstring(object.raw.decode('cp1255', 'ignore'))
         postedits = s.xpath('//span[@class="postedit"]')
         text = []
@@ -47,7 +47,8 @@ class IsrablogCleaner(object):
             as_string = lxml.html.tostring(postedit, encoding='cp1255')
             s = HTMLToText()
             s.feed(as_string)
-            normalized = re.sub('[\r\n\xa0][\r\n\xa0 ]+', '\n', s.text)
+            normalized = s.text.replace('\xa0', ' ')
+            normalized = re.sub('[\r\n][\r\n ]+', '\n', normalized)
             text.append(normalized)
         object.clean_text = '\n---------\n'.join(text).decode('cp1255').\
                 encode('utf8')
@@ -130,7 +131,6 @@ class IsrablogCleaner(object):
         '''
         string = self.word_in_english.sub(r' \1 ', string)
         string = self.character.sub(r' \1 ', string)
-        string = string.replace('\xa0', ' ')
         return string
     
     def dump_to_files(self, object, dir='/home/tal/corpus_dumps'):
