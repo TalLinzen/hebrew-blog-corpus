@@ -53,6 +53,8 @@ class PossessiveDative(Filter):
                     word.prefix in (self.lamed, self.vav_lamed):
                 lamed_indices.add(index)
 
+        #print lamed_indices
+        #print verb_neighborhoods
         sentence.lamed_indices = set(index for index in lamed_indices \
                 if index in verb_neighborhoods)
         return len(sentence.lamed_indices) > 0

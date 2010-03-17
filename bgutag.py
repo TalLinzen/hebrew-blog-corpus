@@ -1,3 +1,5 @@
+from sqlobject.main import SQLObject
+from StringIO import StringIO
 import codecs
 import os
 
@@ -206,8 +208,7 @@ class BGUWord(object):
         word = cls()
         splitted_line = line.split()
         if len(declaration) < len(splitted_line):
-            raise ValueError('Declaration too short to parse line: %s' % \
-                    line.encode('utf8'))
+            raise ValueError('Declaration too short to parse line: %s' % repr(line))
         for feature, value in map(None, declaration, splitted_line):
             if feature not in cls.string_fields:
                 value = cls.special_values.get(value, value)
@@ -254,11 +255,11 @@ class BGUSentence(object):
             else:
                 print
 
-class BGUFile(object):
+class BGUAbstractFile(object):
 
-    def __init__(self, filename, bitmask=False):
+    def __init__(self, file, bitmask=False):
         self.bitmask = bitmask
-        self.file = codecs.open(filename, encoding='utf8')
+        self.file = file
         if not bitmask:
             self.declaration = self.file.readline().split()
             self.file.readline()   # Empty line
@@ -284,9 +285,27 @@ class BGUFile(object):
             line = self.file.readline().strip()
         return BGUSentence(words)
 
+def BGUFile(filename):
+
+    handle = codecs.open(filename, encoding='utf8')
+    return BGUAbstractFile(handle)
+
+def BGUString(string):
+
+    return BGUAbstractFile(StringIO(string.decode('utf8')))
+
+
 def BGUDir(directory):
 
     for filename in os.listdir(directory):
         if filename[0] != '.':
             for sentence in BGUFile(os.path.join(directory, filename)):
                 yield sentence
+
+def BGUQuery(sqlobject_query):
+
+    if isinstance(sqlobject_query, SQLObject):
+        sqlobject_query = [sqlobject_query]
+    for result in sqlobject_query:
+        for sentence in BGUString(result.analyzed):
+            yield sentence
