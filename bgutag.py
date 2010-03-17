@@ -195,9 +195,11 @@ class Masks(object):
 
 Masks.create_reverse_lookups()
 
+
 class BGUWord(object):
     
     special_values = {'_': None, 't': True, 'f': False}
+    string_fields = set(['word', 'base', 'lemma'])
 
     @classmethod
     def from_tokenfeat(cls, declaration, line):
@@ -207,8 +209,11 @@ class BGUWord(object):
             raise ValueError('Declaration too short to parse line: %s' % \
                     line.encode('utf8'))
         for feature, value in map(None, declaration, splitted_line):
-            value = cls.special_values.get(value, value)
+            if feature not in cls.string_fields:
+                value = cls.special_values.get(value, value)
             setattr(word, feature, value)
+        # Hack because of bug:    
+        word.tense, word.person = word.person, word.tense
         return word
 
     @classmethod
@@ -223,6 +228,10 @@ class BGUWord(object):
             setattr(word, feature, value) 
         return word
 
+    def __repr__(self):
+        return "<word='%s' pos='%s' prefix='%s' lemma='%s' base='%s' chunk='%s'>" % \
+                tuple([x.encode('utf8') if x is not None else '' for x in \
+                (self.word, self.pos, self.prefix, self.lemma, self.base, self.chunk)])
 
 class BGUSentence(object):
 

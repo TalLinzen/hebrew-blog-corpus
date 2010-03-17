@@ -124,6 +124,7 @@ class IsrablogCleaner(object):
 
     word_in_english = re.compile(r'([A-Za-z]+)')
     character = re.compile(r'([\)\("-])')
+    dots = re.compile(r'\.\.+')
     def prepare_for_tokenizer(self, string):
         '''
         Surround every word in Latin script with spaces, workaround for
@@ -131,6 +132,7 @@ class IsrablogCleaner(object):
         '''
         string = self.word_in_english.sub(r' \1 ', string)
         string = self.character.sub(r' \1 ', string)
+        string = self.dots.sub(r' \1 ', string)
         return string
     
     def dump_to_files(self, object, dir='/home/tal/corpus_dumps'):
