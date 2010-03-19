@@ -1,7 +1,7 @@
 from sqlobject.main import SQLObject
 from StringIO import StringIO
-import codecs
-import os
+import codecs, os
+from datetime import datetime
 
 class Masks(object):
 
@@ -297,9 +297,18 @@ def BGUString(string):
 
 def BGUDir(directory):
 
-    for filename in os.listdir(directory):
-        if filename[0] != '.':
-            for sentence in BGUFile(os.path.join(directory, filename)):
+    for filename in sorted(os.listdir(directory), key=int):
+        full_filename = os.path.join(directory, filename)
+
+        generator = None
+        if os.path.isdir(full_filename):
+            print '%s - Recursing into %s' % (datetime.now(), full_filename)
+            generator = BGUDir(full_filename)
+        elif filename[0] != '.':
+            generator = BGUFile(full_filename)
+
+        if generator:
+            for sentence in generator:
                 yield sentence
 
 def BGUQuery(sqlobject_query):

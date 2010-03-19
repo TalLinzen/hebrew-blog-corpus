@@ -22,3 +22,16 @@ class Annotation(object):
     center_alignment.direction = Alignment.DIRECTION_RL
     center.alignment = center_alignment
 
+    def write_splitted(self, sentence, split_index, sheet, row):
+        words = [w.word if w.word else '' for w in sentence.words]
+        # None words - where do they come from?
+
+        after = ' '.join(words[:split_index])[-45:],
+        verb = words[split_index],
+        before = ' '.join(words[split_index+1:])[:45],
+        all = ' '.join(words)
+        
+        sheet.write(row, 1, after, self.right)
+        sheet.write(row, 2, verb, self.center)
+        sheet.write(row, 3, before, self.left)
+        sheet.write(row, 4, all, self.left)

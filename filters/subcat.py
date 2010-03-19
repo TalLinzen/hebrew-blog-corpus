@@ -173,12 +173,12 @@ class SubcategorizationFrames(Filter):
                             self.argument_found('NP')
 
     def process_verb(self, word):
-        self.sentence.verb_index = self.index
         if self.potential_argument_zone:
             self.argument_found('NONE')
         if word.lemma in self.interesting_verbs:
             self.counters[word.lemma] = self.counters.get(word.lemma, 0) + 1
             self.good_sentence = True
+            self.sentence.verb_index = self.index
             self.potential_argument_zone = True
         if self.counters.get(word.lemma, 0) >= self.max_tokens:
             self.stop = True
