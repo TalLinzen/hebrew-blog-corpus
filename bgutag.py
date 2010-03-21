@@ -208,7 +208,8 @@ class BGUWord(object):
         word = cls()
         splitted_line = line.split()
         if len(declaration) < len(splitted_line):
-            raise ValueError('Declaration too short to parse line: %s' % repr(line))
+            raise ValueError('Declaration too short to parse line: %s' % \
+                    repr(line))
         for feature, value in map(None, declaration, splitted_line):
             if feature not in cls.string_fields:
                 value = cls.special_values.get(value, value)
@@ -232,12 +233,14 @@ class BGUWord(object):
     def __repr__(self):
         return "<word='%s' pos='%s' prefix='%s' lemma='%s' base='%s' chunk='%s'>" % \
                 tuple([x.encode('utf8') if x is not None else '' for x in \
-                (self.word, self.pos, self.prefix, self.lemma, self.base, self.chunk)])
+                (self.word, self.pos, self.prefix, self.lemma,
+                    self.base, self.chunk)])
 
 class BGUSentence(object):
 
     def __init__(self, words):
         self.words = words
+        self.metadata = {}
 
     def pprint(self, reverse=False):
         if reverse:
@@ -260,6 +263,7 @@ class BGUAbstractFile(object):
     def __init__(self, file, bitmask=False):
         self.bitmask = bitmask
         self.file = file
+        self.index = 0
         if not bitmask:
             self.declaration = self.file.readline().split()
             self.file.readline()   # Empty line
@@ -283,7 +287,10 @@ class BGUAbstractFile(object):
                 if word is not None:
                     words.append(word)
             line = self.file.readline().strip()
-        return BGUSentence(words)
+        sentence = BGUSentence(words)
+        sentence.metadata['index'] = self.index
+        self.index += 1
+        return sentence
 
 def BGUFile(filename):
 
@@ -317,4 +324,6 @@ def BGUQuery(sqlobject_query):
         sqlobject_query = [sqlobject_query]
     for result in sqlobject_query:
         for sentence in BGUString(result.analyzed):
+            sentence.metadata['webpage_id'] = result.id
+            sentence.metadata['user'] = result.user
             yield sentence

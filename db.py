@@ -11,14 +11,14 @@ from sqlobject import *
 class WebPage(SQLObject):
 
     url = StringCol()
-    clean_text = StringCol() # UnicodeCol(dbEncoding='utf8')
+    clean_text = StringCol(sqlType='LONGTEXT') # UnicodeCol(dbEncoding='utf8')
     raw = StringCol() # UnicodeCol(dbEncoding='cp1255')
     accessed = DateTimeCol()
     site = StringCol()
     age = IntCol()
     user = StringCol()
     sex = StringCol()
-    analyzed = StringCol()
+    analyzed = StringCol(sqlType='LONGTEXT')
 
 class User(SQLObject):
 

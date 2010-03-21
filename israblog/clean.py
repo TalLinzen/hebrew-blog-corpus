@@ -124,7 +124,7 @@ class IsrablogCleaner(object):
 
     word_in_english = re.compile(r'([A-Za-z]+)')
     character = re.compile(r'([\)\("-])')
-    dots = re.compile(r'\.\.+')
+    dots = re.compile(r'(\.\.+)')
     def prepare_for_tokenizer(self, string):
         '''
         Surround every word in Latin script with spaces, workaround for
@@ -135,16 +135,19 @@ class IsrablogCleaner(object):
         string = self.dots.sub(r' \1 ', string)
         return string
     
-    def dump_to_files(self, object, dir='/home/tal/corpus_dumps'):
+    def dump_to_files(self, object, dir='/home/tal/corpus/clean_text',
+            prepare_for_tokenizer=True):
         thousand_dir = os.path.join(dir, str(object.id // 1000))
         if not os.path.isdir(thousand_dir):
             os.mkdir(thousand_dir)
         filename = os.path.join(thousand_dir, str(object.id))
-        open(filename, 'w').write(self.prepare_for_tokenizer(object.clean_text))
+        text = self.prepare_for_tokenizer(object.clean_text) if \
+                prepare_for_tokenizer else object.clean_text
+        open(filename, 'w').write(text)
     
     def load_back_from_files(self, object):
         thousand_dir = object.id // 1000
-        f = '/home/tal/analyzed_corpus/%d/%d' % (thousand_dir, object.id)
+        f = '/home/tal/corpus/analyzed/%d/%d' % (thousand_dir, object.id)
         if os.path.exists(f):
             object.analyzed = open(f).read()
 
@@ -155,9 +158,9 @@ def run_morph_analyzer(start, end):
     previous_dir = os.getcwd()
     os.chdir('/home/tal/tagger')
     for i in range(start, end):
-        os.system('rm -rf /home/tal/analyzed_corpus/%d' % i)
-        os.mkdir(os.path.join('/home/tal/analyzed_corpus', str(i)))
-        command = 'java -Xmx1200m -XX:MaxPermSize=256m -cp trove-2.0.2.jar:morphAnalyzer.jar:opennlp.jar:gnu.jar:chunker.jar:splitsvm.jar:duck1.jar:tagger.jar vohmm.application.BasicTagger /home/tal/tagger/ /home/tal/corpus_dumps/%d/ /home/tal/analyzed_corpus/%d/ -lemma -tokenfeat -chunk' % (i, i)
+        os.system('rm -rf /home/tal/corpus/analyzed/%d' % i)
+        os.mkdir(os.path.join('/home/tal/corpus/analyzed', str(i)))
+        command = 'java -Xmx1200m -XX:MaxPermSize=256m -cp trove-2.0.2.jar:morphAnalyzer.jar:opennlp.jar:gnu.jar:chunker.jar:splitsvm.jar:duck1.jar:tagger.jar vohmm.application.BasicTagger /home/tal/tagger/ /home/tal/corpus/clean_text/%d/ /home/tal/corpus/analyzed/%d/ -lemma -tokenfeat -chunk' % (i, i)
         print command
         p = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, close_fds=True)
         print 'STDOUT:', p.stdout.read()

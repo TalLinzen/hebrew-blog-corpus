@@ -1,12 +1,19 @@
+# -*- coding: utf-8 -*-
 from pdb import pm
 import codecs
+from sqlobject import *
 
 from db import setup_connection, WebPage, User
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
 from filters.pd import PossessiveDative
 from filters.subcat import SubcategorizationFrames
+from filters.pd_annotation import PDAnnotation
+from filters.subcat_annotation import SubcatAnnotation
 from bgutag import BGUFile, BGUDir, BGUQuery
+
+interesting_verbs = [u'חפץ', u'התנגד', u'התנדב', u'הכחיש', u'כרסם', u'חייג', u'הצהיר', u'התבשר', u'התחרט',
+        u'נקט', u'התפתה', u'מיעט', u'התגעגע', u'התקרב']
 
 cleaner = IsrablogCleaner()
 harvester = IsrablogHarvester()

@@ -1,7 +1,7 @@
 from pyExcelerator import Workbook
 from annotation import Annotation
 
-class SubCatAnnotation(object):
+class SubcatAnnotation(Annotation):
 
     def create(self, subcat_filter_dict):
 

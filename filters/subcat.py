@@ -2,7 +2,6 @@
 
 from filter import Filter
 
-interesting_verbs = [u'אכל', u'שתה', u'רצה', u'ישב']
 
 class SubcategorizationFrames(Filter):
 
@@ -94,7 +93,8 @@ class SubcategorizationFrames(Filter):
             return
         lemma = self.sentence.words[self.sentence.verb_index].lemma
         l = self.dict.setdefault(lemma, [])
-        l.append(self.sentence)
+        if len(l) < self.max_tokens:
+            l.append(self.sentence)
 
     def feed_word(self, word):
         #if lemma == 'ali' and named_entity == 'I_PERS':    # specific hack
