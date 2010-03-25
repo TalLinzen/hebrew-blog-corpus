@@ -299,6 +299,8 @@ def BGUFile(filename):
 
 def BGUString(string):
 
+    if string[-1] == '\xd7':
+        string = string[:-1]
     return BGUAbstractFile(StringIO(string.decode('utf8')))
 
 

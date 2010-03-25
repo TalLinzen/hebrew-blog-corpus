@@ -25,6 +25,7 @@ class User(SQLObject):
     age = IntCol()
     number = StringCol(length=15)
     sex = StringCol(length=10)
+    chars = IntCol()
     number_index = DatabaseIndex('number')
 
 def setup_connection(password):

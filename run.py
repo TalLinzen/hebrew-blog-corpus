@@ -34,3 +34,14 @@ def pheb2(s):
 
 def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
+
+def query_by_age(min_age, max_age):
+    old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age, 
+        User.q.chars > 500000)))
+    pd = PossessiveDative()
+    for i, user in enumerate(old):
+        print '%d (%s) out of %d' % (i, user, len(old))
+        pd.process_many(BGUQuery(WebPage.select(WebPage.q.user == user.number)))
+    pda = PDAnnotation()
+    pda.create(pd, 'pd%dto%d' % (min_age, max_age))
+    return pd

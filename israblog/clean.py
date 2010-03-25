@@ -109,10 +109,10 @@ class IsrablogCleaner(object):
                     "select distinct sex from web_page where user='%s'" % user)
             potential_sex = [y[0] for y in sexes if y[0] != None]
             sex = potential_sex[0] if len(potential_sex) != 0 else None
-            posts = User._connection.queryAll(
-                    "select clean_text from web_page where user='%s'" % user)
-            posts = '\n'.join(x[0] for x in posts)
-            User(number=user, age=age, sex=sex)
+            chars = User._connection.queryAll(
+                    "select sum(length(clean_text)) from web_page where user='%s'" % user)
+            chars = int(chars[0][0])
+            User(number=user, age=age, sex=sex, chars=chars)
 
     def count_tokens(self, object):
         if not hasattr(self, 'tokens'):

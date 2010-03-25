@@ -1,3 +1,4 @@
+import os
 from pyExcelerator import XFStyle, Alignment, UnicodeUtils
 
 UnicodeUtils.DEFAULT_ENCODING = 'utf8'
@@ -22,13 +23,21 @@ class Annotation(object):
     center_alignment.direction = Alignment.DIRECTION_RL
     center.alignment = center_alignment
 
-    def write_splitted(self, sentence, split_index, sheet, row):
+    def safe_mkdir(self, dirname):
+        dir = os.path.join(os.path.expanduser('~/corpus/annotations'), dirname)
+        try:
+            os.mkdir(dir)
+        except OSError:
+            pass
+        return dir
+
+    def write_splitted(self, sentence, emph_place, sheet, row):
         words = [w.word if w.word else '' for w in sentence.words]
         # None words - where do they come from?
 
-        after = ' '.join(words[:split_index])[-45:]
-        verb = words[split_index]
-        before = ' '.join(words[split_index+1:])[:45]
+        before = ' '.join(words[:emph_place[0]])[-45:]
+        verb = ' '.join(words[emph_place[0]:emph_place[1]+1])
+        after = ' '.join(words[emph_place[1]+1:])[:45]
         all = ' '.join(words)
         
         sheet.write(row, 1, after, self.right)
