@@ -4,12 +4,15 @@ from annotation import Annotation
 
 class PDAnnotation(Annotation):
 
-    def create(self, pd_filter, dirname=''):
+    def __init__(self, pd_filter):
+        self.pd_filter = pd_filter
+
+    def create(self, dirname):
 
         dir = self.safe_mkdir(dirname)
 
         by_user = {}
-        for sentence in pd_filter.sentences:
+        for sentence in self.pd_filter.sentences:
             l = by_user.setdefault(sentence.metadata.get('user', 'NoUser'), [])
             l.append(sentence)
 

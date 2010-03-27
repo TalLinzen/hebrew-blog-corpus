@@ -4,11 +4,17 @@ from annotation import Annotation
 
 class SubcatAnnotation(Annotation):
 
-    def create(self, subcat_filter_dict, dirname=''):
+    def __init__(self, subcat_filter, max_sentences=None):
+        self.subcat_filter = subcat_filter
+        self.max_sentences = max_sentences
 
+    def write(self, dirname):
         dir = self.safe_mkdir(dirname)
 
-        for lemma, sentences in subcat_filter_dict.items():
+        for lemma, sentences in subcat_filter.dict.items():
+            if self.max_sentences != None:
+                sentences = sentences[:self.max_sentences]
+
             workbook = Workbook()
             
             by_argument_type = {}
@@ -25,7 +31,7 @@ class SubcatAnnotation(Annotation):
                 sheet.col(3).width = 0x3000
                 for index, (sentence, original_index) in \
                         enumerate(sentences_of_type):
-                    self.write_splitted(sentence, 
-                            (sentence.verb_index, sentence.verb_index), sheet, index)
+                    highlight = (sentence.verb_index, sentence.verb_index)
+                    self.write_splitted(sentence, highlight, sheet, index)
                 
             workbook.save(os.path.join(dir, lemma + '.xls'))
