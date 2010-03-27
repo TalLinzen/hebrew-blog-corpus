@@ -11,7 +11,7 @@ class SubcatAnnotation(Annotation):
     def write(self, dirname):
         dir = self.safe_mkdir(dirname)
 
-        for lemma, sentences in subcat_filter.dict.items():
+        for lemma, sentences in self.subcat_filter.dict.items():
             if self.max_sentences != None:
                 sentences = sentences[:self.max_sentences]
 
