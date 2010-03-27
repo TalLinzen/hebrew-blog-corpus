@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 verbs_for_subcat = [
         u'וידא',
         u'ניחש',
