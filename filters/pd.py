@@ -1,52 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from filter import Filter
+from possessive import PossessiveFilter
 
-class PossessiveDative(Filter):
-
-    verbs_selecting_l = set([u'נתן',
-            u'היה',
-            u'הראה',
-            u'נמאס',
-            u'האמין',
-            u'הודיע',
-            u'הבטיח',
-            u'הזכיר',
-            u'נדמה'
-            u'נראה',
-            u'מסר',
-            u'לקח',
-            u'העניק',
-            u'הסביר',
-            u'גילה',
-            u'קרה',
-            u'בא',
-            u'אמר',
-            u'קנה',
-            u'הרשה',
-            u'העביר',
-            u'סיפר',
-            u'עזר',
-            u'הגיד',
-            u'החזיר'])
+class PossessiveDativeFilter(PossessiveFilter):
 
     lamed = u'ל'
     vav_lamed = u'ול'
     lamed_fused_forms = [u'לי', u'לך', u'לו', u'לה', u'לנו', u'לכם', u'לכן',
             u'להם', u'להן']
-    max_distance = 0      # Between a verb and its associated lamed phrase
-    debug = False
-
-    clitic_prepositions = set([
-        u'ל',
-        u'ב',
-        u'כ',
-        u'מ'
-    ])
-
-    def __init__(self):
-        Filter.__init__(self)
-        self.natan = []
 
     def process(self, sentence):
         verb_indices = set()
@@ -56,8 +17,6 @@ class PossessiveDative(Filter):
         last_start_of_lamed_phrase = -1
 
         for index, word in enumerate(sentence.words):
-            if word.lemma == u'נתן':
-                self.natan.append(sentence)
             if word.pos == 'punctuation':
                 punctuation_indices.add(index)
             if last_start_of_lamed_phrase != -1 and \
@@ -71,7 +30,7 @@ class PossessiveDative(Filter):
             if word.pos == 'at-preposition' \
                     or word.pos == 'preposition' \
                     or word.prefix in self.clitic_prepositions \
-                    or word.pos == 'noun': # and getattr(word, 'def') == False:
+                    or word.pos == 'noun': 
                 preposition_indices.add(index)
             if word.pos == 'noun' and \
                     word.prefix in (self.lamed, self.vav_lamed) \

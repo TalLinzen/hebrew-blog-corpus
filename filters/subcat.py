@@ -2,7 +2,6 @@
 
 from filter import Filter
 
-
 class SubcategorizationFrames(Filter):
 
     nonclitic_prepositions = set([
@@ -57,6 +56,7 @@ class SubcategorizationFrames(Filter):
     # analyzed as accusative
 
     def __init__(self, interesting_verbs, max_tokens=2000):
+        Filter.__init__(self)
         self.dict = {}
         self.counters = {}
         self.max_tokens = max_tokens
@@ -94,6 +94,7 @@ class SubcategorizationFrames(Filter):
         lemma = self.sentence.words[self.sentence.verb_index].lemma
         l = self.dict.setdefault(lemma, [])
         if len(l) < self.max_tokens:
+            self.reduce_sentence_memory_footprint(self.sentence)
             l.append(self.sentence)
 
     def feed_word(self, word):

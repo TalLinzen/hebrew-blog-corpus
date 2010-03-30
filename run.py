@@ -6,9 +6,11 @@ from sqlobject import *
 from db import setup_connection, WebPage, User
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
-from filters.pd import PossessiveDative
+from filters.pd import PossessiveDativeFilter
+from filters.genitive import GenitiveFilter
 from filters.subcat import SubcategorizationFrames
-from filters.pd_annotation import PDAnnotation
+from filters.by_user_annotation import PossessiveDativeAnnotation, \
+        GenitiveAnnotation
 from filters.subcat_annotation import SubcatAnnotation
 from bgutag import BGUFile, BGUDir, BGUQuery
 from verbs_for_subcat import verbs_for_subcat
