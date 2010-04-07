@@ -1,5 +1,31 @@
 # -*- coding: utf-8 -*-
 
+# Known bugs: 
+# * lo akkhish zot - "zot" not analyzed as NP, same for "harbe", "hamon",
+#   "klum", "hakol" with and without vav
+# * "ki" can also introduce cp (but only in verbs with a significant cp frame)
+# * add list of adverbs? find if adverbs are detected all right
+# * don't treat kedei she, keivan, mipnei, ahrei, kfi, kakh, lamrot she etc as cp
+#   (is there a different tag?)
+# * don't treat bli, kedei lasim as ip
+# * understand "im eize", "im mi", "im ma" as im
+# * split NONE (NP?) into categories based on prepositions
+# * split NP into certain (with ET) and not certain
+# * create NONE (NP?) only if there are many certain NP. And conversely, if
+#   no certain NPs, create only NP (NONE?) ??
+# * elai, eleicha not properly analyzed (NP?)
+# * direct speech verbs - detect quotes (also right before verb, " " amar x)
+# * ehad lasheni, ze leze
+# * lehitnadev o lehatsia - not ip (is it because o isn't like ve?)
+# * auto-tag repetitions
+# * she-lo + IP is IP and not CP
+# * different categories for certain IP (right after verb) and non certain IP
+# * cross-validate le with independent list of infinitives
+# * commas before she (and question words?)
+# * two classes of punctuations: obstructors (,.?!) and non-obstructors ("-)
+# * short hesger - maybe use word after hesger as complement
+# * detect dangling IP/CP and associate them with last argument-less verb
+
 from filter import Filter
 
 class SubcategorizationFrames(Filter):
