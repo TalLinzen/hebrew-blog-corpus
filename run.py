@@ -9,14 +9,24 @@ from israblog.harvest import IsrablogHarvester
 from filters.pd import PossessiveDativeFilter
 from filters.genitive import GenitiveFilter
 from filters.subcat import SubcategorizationFrames
-from filters.by_user_annotation import PossessiveDativeAnnotation, \
-        GenitiveAnnotation
 from filters.subcat_annotation import SubcatAnnotation
+from tools.process_annotation import AnnotationProcessor
 from bgutag import BGUFile, BGUDir, BGUQuery
 from verbs_for_subcat import verbs_for_subcat
 
 cleaner = IsrablogCleaner()
 harvester = IsrablogHarvester()
+
+subcat_annotation_destinations = {'al': 'PP-על',
+        'el': 'PP-אל',
+        'l': 'PP-ל',
+        'm': 'PP-מן',
+        'k': 'PP-כ',
+        'min': 'PP-מן',
+        'b': 'PP-ב'}
+
+subcat_annotation_processor = AnnotationProcessor(
+        destinations=subcat_annotation_destinations)
 
 def pheb(s):
     h = s.decode('cp1255')
@@ -28,13 +38,15 @@ def pheb(s):
 def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
 
-def query_by_age(min_age, max_age):
+def possessive_by_age(min_age, max_age, cls):
     old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age, 
         User.q.chars > 500000)))
-    pd = PossessiveDative()
+    filtr = cls()
     for i, user in enumerate(old):
         print '%d (%s) out of %d' % (i, user, len(old))
-        pd.process_many(BGUQuery(WebPage.select(WebPage.q.user == user.number)))
-    pda = PDAnnotation()
-    pda.create(pd, 'pd%dto%d' % (min_age, max_age))
-    return pd
+        q = BGUQuery(WebPage.select(WebPage.q.user == user.number))
+        filtr.process_many(q)
+    dirname = '%s_%dto%d' % (filtr.Annotation.prefix, min_age, max_age)
+    annotation = filtr.Annotation(filtr)
+    annotation.write(dirname)
+    return filtr

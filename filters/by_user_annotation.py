@@ -5,6 +5,7 @@ from annotation import Annotation
 class ByUserAnnotation(Annotation):
 
     def __init__(self, filter):
+        Annotation.__init__(self)
         self.filter = filter
 
     def write(self, dirname):
@@ -33,14 +34,3 @@ class ByUserAnnotation(Annotation):
         raise NotImplementedError()
 
 
-class PossessiveDativeAnnotation(ByUserAnnotation):
-
-    def get_highlight_area(self, sentence):
-        m = min(sentence.lamed_indices)[0]
-        return (m, m)
-
-class GenitiveAnnotation(ByUserAnnotation):
-
-    def get_highlight_area(self, sentence):
-        m = min(sentence.shel_verb_indices)
-        return (m, m)

@@ -1,13 +1,21 @@
 # -*- coding: utf-8 -*-
 
 from possessive import PossessiveFilter
+from by_user_annotation import ByUserAnnotation
 
 class GenitiveFilter(PossessiveFilter):
+
+    class Annotation(ByUserAnnotation):
+
+        prefix = 'gen'
+        def get_highlight_area(self, sentence):
+            m = min(sentence.shel_verb_indices)
+            return (m, m)
 
     def process(self, sentence):
         last_verb_index = -1
         obstructor_indices = []
-        preposition_indices = []
+        last_preposition = -1
         sentence.shel_verb_indices = set()
         chunk_starts = []
 
@@ -16,38 +24,24 @@ class GenitiveFilter(PossessiveFilter):
             if word.pos == 'punctuation' or word.prefix == u'ש':
                 obstructor_indices.append(index)
 
-            if word.pos == 'verb' and \
-                    word.lemma not in self.verbs_selecting_l:
+            if self.is_relevant_verb(word):
                 last_verb_index = index
                 obstructor_indices = []
                 chunk_starts = []
 
-            #if word.pos == 'at-preposition' \
-            #        or word.pos == 'preposition' \
-            #        or word.prefix in self.clitic_preposition:
-            #    preposition_indices.add(index)
+            if self.is_preposition(word):
+                last_preposition = index
 
             if word.pos == 'shel-preposition':
                 if len(chunk_starts) == 1 and \
                         last_verb_index != -1 and \
+                        last_preposition == last_verb_index + 1 and \
                         len(obstructor_indices) == 0:
                     sentence.shel_verb_indices.add(last_verb_index)
 
             if word.chunk == 'B-NP':
                 chunk_starts.append(index)
             
-        if self.debug:
-            sentence.pprint(reverse=True)
-
-            for i, w in enumerate(sentence.words):
-                print i, w
-
-            print 'punctuation:', punctuation_indices
-            print 'preposition:', preposition_indices
-            print 'lamed:', lamed_phrases
-            print
-            print
-
         return len(sentence.shel_verb_indices) > 0
 
 

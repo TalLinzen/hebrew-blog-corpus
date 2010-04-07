@@ -318,6 +318,7 @@ def BGUDir(directory):
 
         if generator:
             for sentence in generator:
+                sentence.metadata.setdefault('filename', []).append(filename)
                 yield sentence
 
 def BGUQuery(sqlobject_query):

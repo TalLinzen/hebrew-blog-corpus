@@ -39,3 +39,12 @@ class PossessiveFilter(Filter):
         u'מ'
     ])
 
+    def is_relevant_verb(self, word):
+        return word.pos == 'verb' and \
+                word.lemma not in self.verbs_selecting_l
+
+
+    def is_preposition(self, word):
+        return word.pos == 'at-preposition' \
+                or word.pos == 'preposition' \
+                or word.prefix in self.clitic_prepositions

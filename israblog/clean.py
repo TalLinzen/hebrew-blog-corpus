@@ -57,7 +57,8 @@ class IsrablogCleaner(object):
         age_match = self.age_regexp.search(object.raw)
         if age_match:
             object.age = int(age_match.group(2))
-            object.sex = 'male' if age_match.group(1) == '\xe1\xef' else 'female'
+            object.sex = 'male' if age_match.group(1) == '\xe1\xef' else \
+                    'female'
         else:
             sex_match = self.sex_regexp.search(object.raw)
             if sex_match:
@@ -72,6 +73,21 @@ class IsrablogCleaner(object):
         match = self.url_user_regexp.search(object.url)
         object.user = match.group(1)
 
+    def find_duplicates(self, object):
+        # Shouldn't happen -- probably old bugs that have been since corrected
+        same_url = WebPage.select(WebPage.q.url == object.url)
+        deleted = open('/home/tal/corpus/deleted', 'a')
+        for duplicate in list(same_url)[1:]:
+            print 'Deleting %d' % duplicate.id
+            deleted.write('%d\n' % duplicate.id)
+            subdir = str(duplicate.id // 1000)
+            os.unlink('/home/tal/corpus/clean_text/%s/%d' % \
+                    (subdir, duplicate.id))
+            os.unlink('/home/tal/corpus/analyzed/%s/%d' % \
+                    (subdir, duplicate.id))
+            duplicate.destroySelf()
+        deleted.close()
+
     def run_on_many(self, functions, start=0, end=None):
         if end is None:
             end = WebPage._connection.\
@@ -81,7 +97,8 @@ class IsrablogCleaner(object):
             functions = [functions]
         for i in range(start, end, 1000):
             print i
-            objects = WebPage.select("id >= %d and id < %d" % (i, min(end, i + 1000)))
+            objects = WebPage.select("id >= %d and id < %d" % \
+                    (i, min(end, i + 1000)))
             for object in objects:
                 for function in functions:
                     if type(function) == tuple:
