@@ -1,6 +1,7 @@
 import glob, os
-from pyExcelerator import parse_xls, Workbook
+from pyExcelerator import parse_xls, Workbook, UnicodeUtils
 from excel_alignments import left, center, right
+UnicodeUtils.DEFAULT_ENCODING = 'utf8'
 
 class AnnotationProcessor(object):
 
@@ -8,11 +9,12 @@ class AnnotationProcessor(object):
         self.destinations = destinations or {}
         self.ignore_empty = ignore_empty
 
-    def process(self, filename):
+    def transform_workbook(self, parsed_xls):
+
         workbook = Workbook()
         sheets = {}
 
-        for sheet_name, values in parse_xls(filename, 'utf8'):
+        for sheet_name, values in parsed_xls:
             max_row = max(x[0] for x in values.keys())
             for row in range(0, max_row + 1):
                 annotation = values.get((row, 0), '').upper()
@@ -20,7 +22,7 @@ class AnnotationProcessor(object):
                     if self.ignore_empty:
                         continue
                     else:
-                        target = sheet_name
+                        target = sheet_name.encode('utf8')
                 else:
                     target = self.destinations.get(annotation, annotation)
 
@@ -38,12 +40,23 @@ class AnnotationProcessor(object):
 
                 sheets[target][1] = sheet_row + 1
 
-        if filename.endswith('.xls'):
-            filename = filename[:-4]
+        return workbook
 
-        workbook.save(filename + '.processed.xls')
+    def process_dir(self, input_dir, output_dir=None):
+        if output_dir is None:
+            output_dir = os.path.join(input_dir, 'processed')
 
-    def process_dir(self, dir):
-        for f in glob.glob(os.path.join(dir, '*')):
-            if '.processed.' not in f:
-                self.process(f)
+        try:
+            os.mkdir(output_dir)
+        except OSError:
+            pass
+
+        files = glob.glob(os.path.join(input_dir, '*.xls'))
+        if len(files) == 0:
+            raise ValueError('No xls files in specified path')
+
+        for filename in files:
+            parsed = parse_xls(filename, 'utf8')
+            transformed = self.transform_workbook(parsed)
+            target_filename = os.path.join(output_dir, os.path.basename(filename))
+            transformed.save(target_filename)

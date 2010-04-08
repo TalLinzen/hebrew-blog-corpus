@@ -17,13 +17,17 @@ from verbs_for_subcat import verbs_for_subcat
 cleaner = IsrablogCleaner()
 harvester = IsrablogHarvester()
 
-subcat_annotation_destinations = {'al': 'PP-על',
-        'el': 'PP-אל',
-        'l': 'PP-ל',
-        'm': 'PP-מן',
-        'k': 'PP-כ',
-        'min': 'PP-מן',
-        'b': 'PP-ב'}
+subcat_annotation_destinations = {'AL': 'PP-על',
+        'EL': 'PP-אל',
+        'L': 'PP-ל',
+        'LE': 'PP-ל',
+        'M': 'PP-מן',
+        'ME': 'PP-מן',
+        ' ': 'NONE',
+        'K': 'PP-כ',
+        'MIN': 'PP-מן',
+        'B': 'PP-ב',
+        'BE': 'PP-ב'}
 
 subcat_annotation_processor = AnnotationProcessor(
         destinations=subcat_annotation_destinations)
