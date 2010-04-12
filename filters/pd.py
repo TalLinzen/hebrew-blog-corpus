@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from possessive import PossessiveFilter
+from dative import DativeFilter
 from by_user_annotation import ByUserAnnotation
 
-class PossessiveDativeFilter(PossessiveFilter):
-
-    lamed = u'ל'
-    vav_lamed = u'ול'
-    lamed_fused_forms = [u'לי', u'לך', u'לו', u'לה', u'לנו', u'לכם', u'לכן',
-            u'להם', u'להן']
+class PossessiveDativeFilter(PossessiveFilter, DativeFilter):
 
     class Annotation(ByUserAnnotation):
 
@@ -40,12 +36,7 @@ class PossessiveDativeFilter(PossessiveFilter):
             if self.is_preposition(word):
                 preposition_indices.add(index)
 
-            if word.pos == 'noun' and \
-                    word.prefix in (self.lamed, self.vav_lamed) \
-                    or word.lemma == self.lamed \
-                    or word.base in self.lamed_fused_forms:
-                # Last test is in theory redundant but works around
-                # disambiguation errors
+            if self.is_dative(word):
                 last_start_of_lamed_phrase = index
 
             if last_start_of_lamed_phrase != -1:

@@ -8,6 +8,7 @@ from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
 from filters.pd import PossessiveDativeFilter
 from filters.genitive import GenitiveFilter
+from filters.dative import DativeFilter
 from filters.subcat import SubcategorizationFrames
 from filters.subcat_annotation import SubcatAnnotation
 from tools.process_annotation import AnnotationProcessor
@@ -42,7 +43,7 @@ def pheb(s):
 def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
 
-def possessive_by_age(min_age, max_age, cls):
+def apply_filter_by_age(min_age, max_age, cls):
     old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age, 
         User.q.chars > 500000)))
     filtr = cls()
