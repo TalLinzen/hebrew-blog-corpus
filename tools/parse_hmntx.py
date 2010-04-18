@@ -40,4 +40,4 @@ def parse_hmntx(urls):
         d.setdefault(category, []).append(t)
 
     for category, words in d.items():
-        codecs.open(category, 'w', 'utf8').write(u'\n'.join(words))
+        codecs.open(category, 'w', 'utf8').write(u'\n'.join(sorted(words)))
