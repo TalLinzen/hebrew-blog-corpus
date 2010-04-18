@@ -1,36 +1,34 @@
-import os
-from pyExcelerator import Workbook
 from annotation import Annotation
 
 class ByUserAnnotation(Annotation):
+    def create_workbooks(self):
+        for sentence in self.filter.sentences:
+            user = sentence.metadata.get('user', 'NoUser')
+            workbook = self.workbooks.setdefault(user, {user: []})
+            workbook[user].append(sentence)
 
-    def __init__(self, filter):
-        Annotation.__init__(self)
-        self.filter = filter
+class MixUsers(Annotation):
+    def __init__(self, filter, limit):
+        Annotation.__init__(self, filter)
+        self.limit = limit
 
-    def write(self, dirname):
-
-        dir = self.safe_mkdir(dirname)
-
+    def create_workbooks(self):
         by_user = {}
         for sentence in self.filter.sentences:
-            l = by_user.setdefault(sentence.metadata.get('user', 'NoUser'), [])
-            l.append(sentence)
+            user = sentence.metadata.get('user')
+            if user is None:
+                continue
+            user_list = by_user.setdefault(user, [])
+            user_list.append(sentence)
 
-        for user, user_sentences in by_user.items():
-
-            print 'Creating annotation spreadsheet for user %s' % user
-            workbook = Workbook()
-            sheet = workbook.add_sheet(str(user))
-            sheet.col(1).width = 0x3000
-            sheet.col(3).width = 0x3000
-            for index, sentence in enumerate(user_sentences):
-                highlight_area = self.get_highlight_area(sentence)
-                self.write_splitted(sentence, highlight_area, sheet, index)
-            outfile = os.path.join(dir, '%s.xls' % user)
-            workbook.save(outfile)
-
-    def get_highlight_area(self, sentence):
-        raise NotImplementedError()
-
-
+        self.workbooks = {'mixed': {'Mixed': []}}
+        n_written = 0
+        index = 0
+        while n_written < self.limit:
+            for sentences in by_user.values():
+                if n_written == self.limit:
+                    break
+                else:
+                    self.workbooks['mixed']['Mixed'].append(sentences[index])
+                    n_written += 1  
+            index += 1

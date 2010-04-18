@@ -11,9 +11,11 @@ from filters.genitive import GenitiveFilter
 from filters.dative import DativeFilter
 from filters.subcat import SubcategorizationFrames
 from filters.subcat_annotation import SubcatAnnotation
+from filters.count_lemmas import CountLemmas
 from tools.process_annotation import AnnotationProcessor
 from bgutag import BGUFile, BGUDir, BGUQuery
 from verbs_for_subcat import verbs_for_subcat
+from lemmas_to_count import *
 
 cleaner = IsrablogCleaner()
 harvester = IsrablogHarvester()
@@ -43,7 +45,9 @@ def pheb(s):
 def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
 
-def apply_filter_by_age(min_age, max_age, cls):
+def apply_filter_by_age(min_age, max_age, cls, *annotation_args):
+    if (min_age >= max_age):
+        raise ValueError("min_age must be lower than max_age")
     old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age, 
         User.q.chars > 500000)))
     filtr = cls()
@@ -52,6 +56,6 @@ def apply_filter_by_age(min_age, max_age, cls):
         q = BGUQuery(WebPage.select(WebPage.q.user == user.number))
         filtr.process_many(q)
     dirname = '%s_%dto%d' % (filtr.Annotation.prefix, min_age, max_age)
-    annotation = filtr.Annotation(filtr)
+    annotation = filtr.Annotation(filtr, *annotation_args)
     annotation.write(dirname)
     return filtr

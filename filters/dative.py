@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from filter import Filter
-from by_user_annotation import ByUserAnnotation
+from by_user_annotation import MixUsers
 
 class DativeFilter(Filter):
 
@@ -10,7 +10,7 @@ class DativeFilter(Filter):
     lamed_fused_forms = [u'לי', u'לך', u'לו', u'לה', u'לנו', u'לכם', u'לכן',
             u'להם', u'להן']
 
-    class Annotation(ByUserAnnotation):
+    class Annotation(MixUsers):
 
         prefix = 'dat'
         def get_highlight_area(self, sentence):
