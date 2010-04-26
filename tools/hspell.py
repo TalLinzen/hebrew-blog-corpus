@@ -9,5 +9,5 @@ def get_infinitives():
     infinitives = set() 
     for line in verbs.readlines():
         if line[0] == 'L':
-            infinitives.append(lamed + line.split()[0][1:])
+            infinitives.add(lamed + line.split()[0][1:])
     return infinitives
