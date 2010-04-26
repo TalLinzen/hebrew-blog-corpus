@@ -61,7 +61,7 @@ class Annotation(object):
             workbook = Workbook()
 
             for sheet_name, sentences in sheets.items():
-                sheet = workbook.add_sheet(str(sheet_name))
+                sheet = workbook.add_sheet(sheet_name)
                 sheet.col(1).width = 0x3000
                 sheet.col(3).width = 0x3000
 

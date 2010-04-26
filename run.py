@@ -15,7 +15,7 @@ from filters.count_lemmas import CountLemmas
 from tools.process_annotation import AnnotationProcessor
 from bgutag import BGUFile, BGUDir, BGUQuery
 from verbs_for_subcat import verbs_for_subcat
-from lemmas_to_count import *
+from word_lists import *
 
 cleaner = IsrablogCleaner()
 harvester = IsrablogHarvester()
@@ -45,12 +45,14 @@ def pheb(s):
 def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
 
-def apply_filter_by_age(min_age, max_age, cls, *annotation_args):
+def apply_filter_by_age(min_age, max_age, cls, filter_args, annotation_args=()):
+    # apply_filter_by_age(40, 100, PossessiveDativeFilter, {'only_at_is_preposition': True, 'single_word_complement': True})
+    # apply_filter_by_age(40, 100, GenitiveFilter, {'only_at_is_preposition': True, 'single_word_complement': True})
     if (min_age >= max_age):
         raise ValueError("min_age must be lower than max_age")
     old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age, 
         User.q.chars > 500000)))
-    filtr = cls()
+    filtr = cls(**filter_args)
     for i, user in enumerate(old):
         print '%d (%s) out of %d' % (i, user, len(old))
         q = BGUQuery(WebPage.select(WebPage.q.user == user.number))

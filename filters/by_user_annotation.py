@@ -1,11 +1,17 @@
 from annotation import Annotation
 
-class ByUserAnnotation(Annotation):
+class ByAttributeAnnotation(Annotation):
+    '''
+    Separate file for each user
+    '''
     def create_workbooks(self):
         for sentence in self.filter.sentences:
-            user = sentence.metadata.get('user', 'NoUser')
-            workbook = self.workbooks.setdefault(user, {user: []})
-            workbook[user].append(sentence)
+            value = sentence.metadata.get(self.attribute, 'None')
+            workbook = self.workbooks.setdefault(value, {value: []})
+            workbook[value].append(sentence)
+
+class ByUserAnnotation(ByAttributeAnnotation):
+    attribute = 'user'
 
 class MixUsers(Annotation):
     def __init__(self, filter, limit):

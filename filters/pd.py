@@ -6,6 +6,10 @@ from by_user_annotation import ByUserAnnotation
 
 class PossessiveDativeFilter(PossessiveFilter, DativeFilter):
 
+    def __init__(self, single_word_complement=False, **kwargs):
+        PossessiveFilter.__init__(self, **kwargs)
+        self.single_word_complement = single_word_complement
+
     class Annotation(ByUserAnnotation):
 
         prefix = 'pd'
@@ -19,7 +23,7 @@ class PossessiveDativeFilter(PossessiveFilter, DativeFilter):
         punctuation_indices = set()
         preposition_indices = set()
         last_start_of_lamed_phrase = -1
-
+    
         for index, word in enumerate(sentence.words):
             if word.pos == 'punctuation':
                 punctuation_indices.add(index)
@@ -48,5 +52,10 @@ class PossessiveDativeFilter(PossessiveFilter, DativeFilter):
                 if start - 1 in verb_indices \
                 and end + 1 in preposition_indices]
 
-        return len(sentence.lamed_indices) > 0
+        if len(sentence.lamed_indices) > 0:
+            start = sentence.lamed_indices[0][0]
+            sentence.first_verb = sentence.words[start - 1].lemma
+            return True
+        else:
+            return False
 
