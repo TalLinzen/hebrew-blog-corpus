@@ -76,7 +76,7 @@ class PossessiveFilter(Filter):
                     word.lemma in self.white_list
         else:
             return word.pos == 'verb' and \
-                    word.lemma in self.black_list
+                    word.lemma not in self.black_list
 
     def is_preposition(self, word):
         if self.only_at_is_preposition:
