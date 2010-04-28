@@ -26,10 +26,10 @@ class Annotation(object):
     def __init__(self):
         self.workbooks = {}
 
-    def set_filter(self, filter):
-        if len(filter.sentences) == 0:
-            raise ValueError("No sentences in filter, has it been run yet?")
-        self.filter = filter
+    def set_sentences(self, sentences):
+        if len(sentences) == 0:
+            raise ValueError("Sentence list empty")
+        self.sentences = sentences
 
     def safe_mkdir(self, dirname):
         dir = os.path.join(os.path.expanduser('~/corpus/annotations'), dirname)
@@ -39,13 +39,14 @@ class Annotation(object):
             pass
         return dir
 
-    def write_splitted(self, sentence, emph_place, sheet, row):
+    def write_splitted(self, sentence, sheet, row):
+        start, end = sentence.highlight
         words = [w if w else '' for w in sentence.words]
         # None words - where do they come from?
 
-        before = ' '.join(words[:emph_place[0]])[-45:]
-        verb = ' '.join(words[emph_place[0]:emph_place[1]+1])
-        after = ' '.join(words[emph_place[1]+1:])[:45]
+        before = ' '.join(words[:start])[-45:]
+        verb = ' '.join(words[start:end+1])
+        after = ' '.join(words[end+1:])[:45]
         all = ' '.join(words)
         
         sheet.write(row, 1, after, self.right)
@@ -70,8 +71,7 @@ class Annotation(object):
                 sheet.col(3).width = 0x3000
 
                 for index, sentence in enumerate(sentences):
-                    highlight_area = self.filter.get_highlight_area(sentence)
-                    self.write_splitted(sentence, highlight_area, sheet, index)
+                    self.write_splitted(sentence, sheet, index)
 
             outfile = os.path.join(dir, '%s.xls' % workbook_name)
             workbook.save(outfile)

@@ -11,9 +11,6 @@ class PossessiveDativeFilter(PossessiveFilter, DativeFilter):
         self.single_word_complement = single_word_complement
 
     annotation_prefix = 'pd'
-    def get_highlight_area(self, sentence):
-        m = sentence.lamed_index
-        return (m, m)
 
     def process(self, sentence):
         verb_indices = set()
@@ -22,7 +19,7 @@ class PossessiveDativeFilter(PossessiveFilter, DativeFilter):
         preposition_indices = set()
         last_start_of_lamed_phrase = -1
     
-        for index, word in enumerate(sentence.words):
+        for index, word in enumerate(sentence.rich_words):
             if last_start_of_lamed_phrase != -1 and \
                     word.chunk != 'I-NP':
                 lamed_phrases.append(
@@ -52,15 +49,14 @@ class PossessiveDativeFilter(PossessiveFilter, DativeFilter):
                 and len(set(range(start, end + 1)) & obstructor_indices) == 0]
 
         if len(lamed_indices) > 0:
-            sentence.lamed_index = lamed_indices[0][0]
-            print 'LAMED:', sentence.lamed_index
-            verb_index = max(i for i in verb_indices if \
-                    i < sentence.lamed_index)
-            print 'VERB:', verb_index
-            verb = sentence.words[verb_index].lemma
+            start, end = lamed_indices[0]
+            sentence.highlight = (start, end)
+            verb_index = max(i for i in verb_indices if i < start)
+            verb = sentence.rich_words[verb_index].lemma
             if self.verb_count_still_low(verb):
                 sentence.metadata['verb'] = verb
-                print 'VERB:', sentence.metadata['verb'].encode('utf8')
+                sentence.metadata['dative_argument'] = ' '.join( \
+                        sentence.words[start:end+1])
                 return True
 
         return False

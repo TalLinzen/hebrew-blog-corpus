@@ -29,13 +29,6 @@ class DativeFilter(Filter):
 
     infinitives = get_infinitives()
 
-    class Annotation(ByAttributeAnnotation):
-        attribute = 'pre_dative'
-        prefix = 'dat'
-        def get_highlight_area(self, sentence):
-            m = min(sentence.lamed_indices)
-            return (m, m)
-
     def __init__(self, pre_dative_lemmas=None, filter_infinitives=True, 
             **kwargs):
         '''
@@ -66,10 +59,10 @@ class DativeFilter(Filter):
 
     def process(self, sentence):
 
-        sentence.lamed_indices = []
+        lamed_indices = []
         last_pre_dative_index = -10
 
-        for index, word in enumerate(sentence.words):
+        for index, word in enumerate(sentence.rich_words):
             if self.pre_dative_lemmas is not None and \
                     word.lemma in self.pre_dative_lemmas:
                 self.counters[word.lemma] += 1
@@ -79,7 +72,12 @@ class DativeFilter(Filter):
             elif self.is_dative(word) and \
                     (self.pre_dative_lemmas is None or \
                     last_pre_dative_index == index - 1):
-                sentence.lamed_indices.append(index)
+                lamed_indices.append(index)
                 break
                 
-        return len(sentence.lamed_indices) > 0
+        if len(sentence.lamed_indices) > 0:
+            first = lamed_indices[0]
+            sentence.hightlight = (first, first)
+            return True
+        else:
+            return False

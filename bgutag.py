@@ -2,6 +2,7 @@ from sqlobject.main import SQLObject
 from StringIO import StringIO
 import codecs, os
 from datetime import datetime
+from db import User
 
 class Masks(object):
 
@@ -238,9 +239,13 @@ class BGUWord(object):
 
 class BGUSentence(object):
 
-    def __init__(self, words):
-        self.words = words
+    def __init__(self, rich_words):
+        self.rich_words = rich_words
+        self.words = [word.word for word in self.rich_words]
         self.metadata = {}
+
+    def reduce_memory_footprint(self):
+        del self.rich_words
 
     def pprint(self, reverse=False):
         if reverse:
@@ -257,6 +262,7 @@ class BGUSentence(object):
                 print ' '.join(w.word for w in self.words).encode('utf8')
             else:
                 print
+
 
 class BGUAbstractFile(object):
 
@@ -327,8 +333,10 @@ def BGUQuery(sqlobject_query):
 
     if isinstance(sqlobject_query, SQLObject):
         sqlobject_query = [sqlobject_query]
+
     for result in sqlobject_query:
         for sentence in BGUString(result.analyzed):
             sentence.metadata['webpage_id'] = result.id
             sentence.metadata['user'] = result.user
+            sentence.metadata['age'] = User.byNumber(result.user).age
             yield sentence

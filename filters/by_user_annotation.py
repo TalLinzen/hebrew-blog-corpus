@@ -48,7 +48,7 @@ class ByAttributeAnnotation(Annotation):
         self.max_tokens = max_tokens
 
     def create_workbooks(self):
-        by_attribute = group_by_attribute(self.attribute, self.filter.sentences)
+        by_attribute = group_by_attribute(self.attribute, self.sentences)
         d = {}
         for value, sentences in by_attribute.items():
             if len(sentences) >= self.min_tokens:
@@ -66,5 +66,5 @@ class MixUsers(Annotation):
         self.limit = limit
 
     def create_workbooks(self):
-        mixed = mix_attribute('user', self.filter.sentences, self.limit)
+        mixed = mix_attribute('user', self.sentences, self.limit)
         self.workbooks = {'mixed': {'Mixed': mixed}}

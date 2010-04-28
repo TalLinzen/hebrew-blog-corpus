@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pdb import pm
-import codecs
+import codecs, json
 from sqlobject import *
 
 from db import setup_connection, WebPage, User
@@ -58,9 +58,9 @@ def apply_filters_by_age(min_age, max_age, filters, annotator):
     for i, user in enumerate(old):
         print '%d (%s) out of %d' % (i, user, len(old))
         q = BGUQuery(WebPage.select(WebPage.q.user == user.number))
-        filters[0].process_many(filters, q)
+        filters[0].process_many(q, filters[1:])
     for filter in filters:
         dirname = '%s_%dto%d' % (filter.annotation_prefix, min_age, max_age)
-        annotator.set_filter(filter)
+        annotator.set_sentences(filter.sentences)
         annotator.write(dirname)
     return filters

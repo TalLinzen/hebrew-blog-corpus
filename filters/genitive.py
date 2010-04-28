@@ -9,18 +9,15 @@ class GenitiveFilter(PossessiveFilter):
         self.single_word_complement = single_word_complement
 
     annotation_prefix = 'gen'
-    def get_highlight_area(self, sentence):
-        m = sentence.verb_index
-        return (m, m)
 
     def process(self, sentence):
         last_verb_index = -1
         obstructor_indices = []
         last_preposition = -1
-        sentence.verb_index = None
+        verb_index = None
         chunk_starts = []
 
-        for index, word in enumerate(sentence.words):
+        for index, word in enumerate(sentence.rich_words):
 
             if self.is_obstructor(word):
                 obstructor_indices.append(index)
@@ -40,16 +37,17 @@ class GenitiveFilter(PossessiveFilter):
                         last_verb_index != -1 and \
                         last_preposition == last_verb_index + 1 and \
                         len(obstructor_indices) == 0:
-                    sentence.verb_index = last_verb_index
+                    verb_index = last_verb_index
                     break
 
             if word.chunk == 'B-NP':
                 chunk_starts.append(index)
 
-        if sentence.verb_index is not None:
-            verb = sentence.words[sentence.verb_index].lemma
+        if verb_index is not None:
+            verb = sentence.rich_words[verb_index].lemma
             if self.verb_count_still_low(verb):
                 sentence.metadata['verb'] = verb
+                sentence.highlight = (verb_index, verb_index)
                 return True
 
         return False

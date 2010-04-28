@@ -23,7 +23,7 @@ class WebPage(SQLObject):
 class User(SQLObject):
 
     age = IntCol()
-    number = StringCol(length=15)
+    number = StringCol(length=15, alternateID=True)
     sex = StringCol(length=10)
     chars = IntCol()
     number_index = DatabaseIndex('number')
