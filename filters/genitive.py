@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from possessive import PossessiveFilter
-from by_user_annotation import ByUserAnnotation
 
 class GenitiveFilter(PossessiveFilter):
 
@@ -9,23 +8,21 @@ class GenitiveFilter(PossessiveFilter):
         PossessiveFilter.__init__(self, **kwargs)
         self.single_word_complement = single_word_complement
 
-    class Annotation(ByUserAnnotation):
-
-        prefix = 'gen'
-        def get_highlight_area(self, sentence):
-            m = min(sentence.shel_verb_indices)
-            return (m, m)
+    annotation_prefix = 'gen'
+    def get_highlight_area(self, sentence):
+        m = sentence.verb_index
+        return (m, m)
 
     def process(self, sentence):
         last_verb_index = -1
         obstructor_indices = []
         last_preposition = -1
-        sentence.shel_verb_indices = set()
+        sentence.verb_index = None
         chunk_starts = []
 
         for index, word in enumerate(sentence.words):
 
-            if word.pos == 'punctuation' or word.prefix == u'ש':
+            if self.is_obstructor(word):
                 obstructor_indices.append(index)
 
             if self.is_relevant_verb(word):
@@ -43,11 +40,18 @@ class GenitiveFilter(PossessiveFilter):
                         last_verb_index != -1 and \
                         last_preposition == last_verb_index + 1 and \
                         len(obstructor_indices) == 0:
-                    sentence.shel_verb_indices.add(last_verb_index)
+                    sentence.verb_index = last_verb_index
+                    break
 
             if word.chunk == 'B-NP':
                 chunk_starts.append(index)
-            
-        return len(sentence.shel_verb_indices) > 0
+
+        if sentence.verb_index is not None:
+            verb = sentence.words[sentence.verb_index].lemma
+            if self.verb_count_still_low(verb):
+                sentence.metadata['verb'] = verb
+                return True
+
+        return False
 
 

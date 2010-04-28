@@ -3,6 +3,7 @@ try:
 except ImportError:
     guppy = None
 
+import sha1
 
 class LeanWord(object):
     def __init__(self, word):
@@ -12,6 +13,7 @@ class Filter(object):
 
     def __init__(self, guppy_interval=None):
         self.sentences = []
+        self.sentence_hashes = set()
         self.running = True
         self.guppy_interval = guppy_interval
         if guppy is not None:
@@ -20,14 +22,19 @@ class Filter(object):
     def reduce_sentence_memory_footprint(self, sentence):
         sentence.words = [word.word for word in sentence.words]
 
-    def process_many(self, sentences):
-        for index, sentence in enumerate(sentences):
-            if self.guppy_interval is not None and \
-                    index % self.guppy_interval == 0:
-                print self.hpy.heap()
-            result = self.process(sentence)
-            if result:
-                self.reduce_sentence_memory_footprint(sentence)
+    def process_and_record(self, sentence):
+        result = self.process(sentence)
+        if result:
+            unique = ''.join(sentence.words) + sentence.metadata['user']
+            digest = hashlib.sha1(unique).digest()
+            if digest not in self.sentence_hashes:
+                self.sentence_hashes.add(digest)
                 self.sentences.append(sentence)
-            if not self.running:
-                break
+
+    def process_many(self, filters, sentences):
+        if self not in filters:
+            raise ValueError('self not in filters')
+        for index, sentence in enumerate(sentences):
+            for filter in filters:
+                filter.process_and_record(sentence)
+            self.reduce_sentence_memory_footprint(sentence)
