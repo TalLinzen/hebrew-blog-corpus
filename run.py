@@ -3,6 +3,7 @@ from pdb import pm
 import codecs, json
 from sqlobject import *
 
+from io import BGUFile, BGUDir, BGUQuery
 from db import setup_connection, WebPage, User
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
@@ -14,8 +15,8 @@ from filters.subcat import SubcategorizationFrames
 from filters.subcat_annotation import SubcatAnnotation
 from filters.by_user_annotation import MixUsers, ByAttributeAnnotation
 from filters.count_lemmas import CountLemmas
+from filters.annotation import read_sentence_file, update_annotation_directory
 from tools.process_annotation import AnnotationProcessor
-from bgutag import BGUFile, BGUDir, BGUQuery
 from verbs_for_subcat import verbs_for_subcat
 from word_lists import *
 

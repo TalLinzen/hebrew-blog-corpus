@@ -1,7 +1,39 @@
-import os
-from pyExcelerator import XFStyle, Alignment, UnicodeUtils, Workbook
+import os, json
+from pyExcelerator import XFStyle, Alignment, UnicodeUtils, Workbook, parse_xls
+from .io import BGUSentence
 
 UnicodeUtils.DEFAULT_ENCODING = 'utf8'
+
+def read_sentence_file(filename):
+    sentences = []
+    for sentence in json.load(open(filename)):
+        obj = BGUSentence()
+        obj.__dict__.update(sentence)
+        sentences.append(obj)
+    return sentences
+
+def write_sentence_file(sentences, filename):
+    f = open(filename, 'w')
+    json.dump([obj.__dict__ for obj in sentences], f)
+
+def update_annotation_directory(dirname):
+
+    sentence_file_name = os.path.join(dirname, 'sentences.json')
+    sentences = read_sentence_file(sentence_file_name)
+
+    for file in os.listdir(dirname):
+        if file.endswith('.xls'):
+            filename = os.path.join(dirname, file)
+            parsed = parse_xls(filename, 'utf8')
+            for sheet_name, values in parsed:
+                max_row = max(x[0] for x in values.keys())
+                for row in range(0, max_row + 1):
+                    annotation = values.get((row, 0), '')
+                    id = values[(row, 5)]
+                    sentences[id].annotation = annotation
+
+    write_sentence_file(sentences, sentence_file_name)
+
 
 class Annotation(object):
 
@@ -30,6 +62,9 @@ class Annotation(object):
         if len(sentences) == 0:
             raise ValueError("Sentence list empty")
         self.sentences = sentences
+        for index, sentence in enumerate(self.sentences):
+            sentence.id = index
+            sentence.annotation = ''
 
     def safe_mkdir(self, dirname):
         dir = os.path.join(os.path.expanduser('~/corpus/annotations'), dirname)
@@ -49,11 +84,12 @@ class Annotation(object):
         after = ' '.join(words[end+1:])[:45]
         all = ' '.join(words)
         
+        sheet.write(row, 0, sentence.annotation, self.left)
         sheet.write(row, 1, after, self.right)
         sheet.write(row, 2, verb, self.center)
         sheet.write(row, 3, before, self.left)
         sheet.write(row, 4, all, self.left)
-        sheet.write(row, 5, str(sentence.metadata), self.left)
+        sheet.write(row, 5, sentence.id, self.left)
 
     def write(self, dirname):
 
@@ -75,6 +111,10 @@ class Annotation(object):
 
             outfile = os.path.join(dir, '%s.xls' % workbook_name)
             workbook.save(outfile)
+
+        sentence_file_name = os.path.join(dir, 'sentences.json')
+        write_sentence_file(self.sentences, sentence_file_name)
+
 
     def get_highlight_area(self, sentence):
         raise NotImplementedError()
