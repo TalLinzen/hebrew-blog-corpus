@@ -11,3 +11,5 @@ def get_infinitives():
         if line[0] == 'L':
             infinitives.add(lamed + line.split()[0][1:])
     return infinitives
+
+infinitives = get_infinitives()

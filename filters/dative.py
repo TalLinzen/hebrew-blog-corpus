@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from filter import Filter
-from by_user_annotation import MixUsers, ByAttributeAnnotation
-from .tools.hspell import get_infinitives
+from .tools.hspell import infinitives
 
 class DativeFilter(Filter):
 
@@ -27,10 +26,7 @@ class DativeFilter(Filter):
         u'הנאה'
     ]
 
-    infinitives = get_infinitives()
-
-    def __init__(self, pre_dative_lemmas=None, filter_infinitives=True, 
-            **kwargs):
+    def __init__(self, pre_dative_lemmas=None, filter_infinitives=True):
         '''
         pre_dative_lemmas: Only retain sentence if lemma before dative
             is in this list (default: None, retain everything)
@@ -53,7 +49,7 @@ class DativeFilter(Filter):
                 # Last test is in theory redundant but works around
                 # disambiguation errors
         if self.filter_infinitives:
-            return dative and word.word not in self.infinitives 
+            return dative and word.word not in infinitives 
         else:
             return dative
 

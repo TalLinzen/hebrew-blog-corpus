@@ -140,3 +140,8 @@ def BGUQuery(sqlobject_query):
             sentence.metadata['age'] = User.byNumber(result.user).age
             yield sentence
 
+def BGUQueries(sqlobject_queries):
+    for query in sqlobject_queries:
+        print query
+        for sentence in BGUQuery(query):
+            yield sentence

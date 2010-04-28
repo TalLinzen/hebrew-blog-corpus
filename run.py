@@ -3,7 +3,7 @@ from pdb import pm
 import codecs, json
 from sqlobject import *
 
-from io import BGUFile, BGUDir, BGUQuery
+from io import BGUFile, BGUDir, BGUQuery, BGUQueries
 from db import setup_connection, WebPage, User
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
@@ -49,6 +49,14 @@ def pufc(count, n=1000, rev=True):
 
 def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
+
+def users_by_age(min_age, max_age):
+    queries = []
+    old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age)))
+    for i, user in enumerate(old):
+        queries.append(WebPage.select(WebPage.q.user == user.number))
+    return queries
+
 
 def apply_filters_by_age(min_age, max_age, filters, annotator):
     filters = list(filters)

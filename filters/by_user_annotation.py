@@ -10,7 +10,6 @@ def group_by_attribute(attribute, sentences):
     return by_attribute
 
 def mix_attribute(attribute, sentences, limit):
-
     result = []
     index = 0
     limit = min(limit, len(sentences))
@@ -27,14 +26,13 @@ def mix_attribute(attribute, sentences, limit):
     return result
 
 class ByAttributeAnnotation(Annotation):
-    '''
-    Separate file for each value of attribute
-    '''
-    def __init__(self, attribute, single_workbook=False, 
-            min_tokens=2, max_tokens=1000):
+
+    def __init__(self, attribute, single_workbook=False, single_file_name='All',
+            min_tokens=2, max_tokens=3000):
         '''
         single_workbook: if True, all attribute values will be on the same
             workbook, as sheets; otherwise create separate files for each value
+        single_file_name: name to give single workbook, if applicable
         min_tokens: if attribute value has less than this number of occurences
             don't create a sheet for it
         max_tokens: stop writing sentences to sheet after this amount of
@@ -55,7 +53,7 @@ class ByAttributeAnnotation(Annotation):
                 d[value] = mix_attribute('user', sentences, self.max_tokens)
 
         if self.single_workbook:
-            self.workbooks = {'All': by_attribute}
+            self.workbooks = {single_file_name: by_attribute}
         else:
             self.workbooks = dict((value, {value: sentences}) for \
                     value, sentences in d.items())

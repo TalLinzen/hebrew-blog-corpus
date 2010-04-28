@@ -17,7 +17,9 @@ def write_sentence_file(sentences, filename):
     json.dump([obj.__dict__ for obj in sentences], f)
 
 def update_annotation_directory(dirname):
-
+    '''
+    Load manual annotations from Excel files and update the JSON file
+    '''
     sentence_file_name = os.path.join(dirname, 'sentences.json')
     sentences = read_sentence_file(sentence_file_name)
 
@@ -64,7 +66,8 @@ class Annotation(object):
         self.sentences = sentences
         for index, sentence in enumerate(self.sentences):
             sentence.id = index
-            sentence.annotation = ''
+            if not hasattr(sentence, 'annotation'):
+                sentence.annotation = ''
 
     def safe_mkdir(self, dirname):
         dir = os.path.join(os.path.expanduser('~/corpus/annotations'), dirname)
@@ -114,10 +117,6 @@ class Annotation(object):
 
         sentence_file_name = os.path.join(dir, 'sentences.json')
         write_sentence_file(self.sentences, sentence_file_name)
-
-
-    def get_highlight_area(self, sentence):
-        raise NotImplementedError()
 
     def create_workbooks(self):
         raise NotImplementedError()

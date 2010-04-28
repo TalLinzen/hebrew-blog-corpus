@@ -20,7 +20,7 @@ class Filter(object):
         result = self.process(sentence)
         if result:
             unique = ''.join(sentence.words).encode('utf8') + \
-                    sentence.metadata['user']
+                    sentence.metadata.get('user', '')
             digest = hashlib.sha1(unique).digest()
             if digest not in self.sentence_hashes:
                 self.sentence_hashes.add(digest)
