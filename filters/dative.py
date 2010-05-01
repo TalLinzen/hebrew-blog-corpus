@@ -3,30 +3,44 @@
 from filter import Filter
 from .tools.hspell import infinitives
 
+lamed = u'ל'
+vav_lamed = u'ול'
+lamed_fused_forms = [
+    u'לי',
+    u'לך',
+    u'לו',
+    u'לה',
+    u'לנו',
+    u'לכם',
+    u'לכן',
+    u'להם',
+    u'להן'
+]
+
+false_datives = [
+    u'רגע',
+    u'כבוד',
+    u'צד',
+    u'הנאה'
+]
+
+def is_dative(word, filter_infinitives=True):
+    dative = word.pos == 'noun' and \
+                word.lemma not in false_datives and \
+                word.prefix in (lamed, vav_lamed) \
+                or word.lemma == lamed \
+                or word.base in lamed_fused_forms
+            # Last test is in theory redundant but works around
+            # disambiguation errors
+    if filter_infinitives:
+        return dative and word.word not in infinitives 
+    else:
+        return dative
+
 class DativeFilter(Filter):
 
-    lamed = u'ל'
-    vav_lamed = u'ול'
-    lamed_fused_forms = [
-        u'לי',
-        u'לך',
-        u'לו',
-        u'לה',
-        u'לנו',
-        u'לכם',
-        u'לכן',
-        u'להם',
-        u'להן'
-    ]
-
-    false_datives = [
-        u'רגע',
-        u'כבוד',
-        u'צד',
-        u'הנאה'
-    ]
-
-    def __init__(self, pre_dative_lemmas=None, filter_infinitives=True):
+    def __init__(self, pre_dative_lemmas=None, filter_infinitives=True, 
+            **kwargs):
         '''
         pre_dative_lemmas: Only retain sentence if lemma before dative
             is in this list (default: None, retain everything)
@@ -40,19 +54,6 @@ class DativeFilter(Filter):
             self.counters = dict((x, 0) for x in self.pre_dative_lemmas)
         self.limit = 5000
 
-    def is_dative(self, word):
-        dative = word.pos == 'noun' and \
-                    word.lemma not in self.false_datives and \
-                    word.prefix in (self.lamed, self.vav_lamed) \
-                    or word.lemma == self.lamed \
-                    or word.base in self.lamed_fused_forms
-                # Last test is in theory redundant but works around
-                # disambiguation errors
-        if self.filter_infinitives:
-            return dative and word.word not in infinitives 
-        else:
-            return dative
-
     def process(self, sentence):
 
         lamed_indices = []
@@ -65,7 +66,7 @@ class DativeFilter(Filter):
                 if self.counters[word.lemma] < self.limit:
                     last_pre_dative_index = index
                     sentence.metadata['pre_dative'] = word.lemma
-            elif self.is_dative(word) and \
+            elif is_dative(word, self.filter_infinitives) and \
                     (self.pre_dative_lemmas is None or \
                     last_pre_dative_index == index - 1):
                 lamed_indices.append(index)

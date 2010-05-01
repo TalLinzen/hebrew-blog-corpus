@@ -51,23 +51,17 @@ def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
 
 def users_by_age(min_age, max_age):
+    if (min_age >= max_age):
+        raise ValueError("min_age must be lower than max_age")
     queries = []
     old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age)))
     for i, user in enumerate(old):
         queries.append(WebPage.select(WebPage.q.user == user.number))
     return queries
 
-
 def apply_filters_by_age(min_age, max_age, filters, annotator):
     filters = list(filters)
-    if (min_age >= max_age):
-        raise ValueError("min_age must be lower than max_age")
-    old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age, 
-        User.q.chars > 500000)))
-    for i, user in enumerate(old):
-        print '%d (%s) out of %d' % (i, user, len(old))
-        q = BGUQuery(WebPage.select(WebPage.q.user == user.number))
-        filters[0].process_many(q, filters[1:])
+    filters[0].process_many(users_by_age(min_age, max_age), filters[1:])
     for filter in filters:
         dirname = '%s_%dto%d' % (filter.annotation_prefix, min_age, max_age)
         annotator.set_sentences(filter.sentences)

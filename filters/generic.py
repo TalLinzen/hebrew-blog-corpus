@@ -26,7 +26,9 @@ class GenericFilter(Filter):
         for index, word in enumerate(sentence.rich_words):
             predicate, options = self.processed_predicates[len(metadatas)]
             new_metadata = predicate(word)
-            if new_metadata is not None:
+            if new_metadata == True:
+                new_metadata = {}
+            if type(new_metadata) == dict:
                 if options.get('highlight', False):
                     # Currently supports only single word highlight
                     sentence.highlight = (index, index)
@@ -40,10 +42,13 @@ class GenericFilter(Filter):
         if len(metadatas) == len(self.predicates):
             for metadata in metadatas:
                 sentence.metadata.update(metadata)
+            self.post_process(sentence)
             return True
         else:
             return False
 
+    def post_process(self, sentence):
+        pass
 
 class Bishvil(GenericFilter):
 
@@ -60,11 +65,34 @@ class Bishvil(GenericFilter):
         good = word.tense != 'inf' and \
                 (word.prefix is None or u'ש' not in word.prefix) and \
                 word.word not in infinitives
-        if good:
-            return {}
+        return good
 
     predicates = [
-            (bishvil, {'highlight': True}),
-            not_conjunction
-        ]
+        (bishvil, {'highlight': True}),
+        not_conjunction
+    ]
+
+from dative import is_dative, lamed_fused_forms
+
+class YeshDative(GenericFilter):
+
+    def yesh_or_ein(word):
+        if word.word in (u'יש', u'אין'):
+            return {'lemma': word.word}
+
+    def is_dative_wrapped(word):
+        if is_dative(word):
+            if word.word in lamed_fused_forms:
+                return {'argument': 'pronoun'}
+            else:
+                return {'argument': 'lexical'}
+
+    def post_process(self, sentence):
+        sentence.metadata['lemma_and_argument'] = '%s_%s' % \
+                (sentence.metadata['lemma'], sentence.metadata['argument'])
+
+    predicates = [
+        yesh_or_ein,
+        (is_dative_wrapped, {'highlight': True})
+    ]
 

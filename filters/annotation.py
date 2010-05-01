@@ -57,8 +57,9 @@ class Annotation(object):
     center_alignment.direction = Alignment.DIRECTION_RL
     center.alignment = center_alignment
 
-    def __init__(self):
+    def __init__(self, description):
         self.workbooks = {}
+        self.description = description
 
     def set_sentences(self, sentences):
         if len(sentences) == 0:
@@ -78,7 +79,7 @@ class Annotation(object):
         return dir
 
     def write_splitted(self, sentence, sheet, row):
-        start, end = sentence.highlight
+        start, end = getattr(sentence, 'highlight', (0, 0))
         words = [w if w else '' for w in sentence.words]
         # None words - where do they come from?
 
@@ -111,6 +112,9 @@ class Annotation(object):
 
                 for index, sentence in enumerate(sentences):
                     self.write_splitted(sentence, sheet, index)
+
+            meta_sheet = workbook.add_sheet('meta')
+            meta_sheet.write(0, 0, self.description)
 
             outfile = os.path.join(dir, '%s.xls' % workbook_name)
             workbook.save(outfile)

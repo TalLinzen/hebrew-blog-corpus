@@ -141,7 +141,7 @@ def BGUQuery(sqlobject_query):
             yield sentence
 
 def BGUQueries(sqlobject_queries):
-    for query in sqlobject_queries:
-        print query
+    for index, query in enumerate(sqlobject_queries):
+        print '%d out of %d' % (index, len(sqlobject_queries))
         for sentence in BGUQuery(query):
             yield sentence
