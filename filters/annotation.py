@@ -1,4 +1,5 @@
 import os, json
+from datetime import datetime
 from pyExcelerator import XFStyle, Alignment, UnicodeUtils, Workbook, parse_xls
 from .io import BGUSentence
 
@@ -57,9 +58,10 @@ class Annotation(object):
     center_alignment.direction = Alignment.DIRECTION_RL
     center.alignment = center_alignment
 
-    def __init__(self, description):
+    def __init__(self, description, custom_field=None):
         self.workbooks = {}
         self.description = description
+        self.custom_field = custom_field
 
     def set_sentences(self, sentences):
         if len(sentences) == 0:
@@ -94,6 +96,13 @@ class Annotation(object):
         sheet.write(row, 3, before, self.left)
         sheet.write(row, 4, all, self.left)
         sheet.write(row, 5, sentence.id, self.left)
+        custom_data = ''
+        if isinstance(self.custom_field, basestring):
+            custom_data = sentence.metadata[self.custom_field]
+        elif callable(self.custom_field):
+            custom_data = self.custom_field(sentence)
+        sheet.write(row, 6, custom_data, self.right)
+
 
     def write(self, dirname):
 
@@ -115,6 +124,7 @@ class Annotation(object):
 
             meta_sheet = workbook.add_sheet('meta')
             meta_sheet.write(0, 0, self.description)
+            meta_sheet.write(1, 0, str(datetime.now()))
 
             outfile = os.path.join(dir, '%s.xls' % workbook_name)
             workbook.save(outfile)

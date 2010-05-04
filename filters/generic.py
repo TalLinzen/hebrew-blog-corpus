@@ -7,6 +7,8 @@ clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
 debug = False
 
+# State
+
 class State(dict):
     
     def __init__(self, *args, **kwargs):
@@ -17,18 +19,34 @@ class State(dict):
         if not self.lookahead:
             dict.__setitem__(self, attr, value)
 
+    def __getitem__(self, attr):
+        if attr in self or not self.lookahead:
+            return dict.__getitem__(self, attr)
+        else:
+            return None
+
+
+#############################################
+# Builtin predicates and predicate factories
+#############################################
+
 def is_obstructor(word, state):
     return word.pos == 'punctuation' or word.prefix in (u'ש', u'וש')
 
 def anything(word, state):
     return True
 
-def Equal(field, value):
+def equal(field, value):
     def predicate(word, state):
         return getattr(word, field) == value
     return predicate
 
-def OneOf(field, values, export_field=None):
+def not_equal(field, value):
+    def predicate(word, state):
+        return getattr(word, field) != value
+    return predicate
+
+def one_of(field, values, export_field=None):
     if export_field:
         def predicate(word, state):
             attr = getattr(word, field)
@@ -40,8 +58,25 @@ def OneOf(field, values, export_field=None):
             return getattr(word, field) in values
     return predicate
 
+def not_one_of(field, values):
+    def predicate(word, state):
+        return getattr(word, field) not in values
+    return predicate
+
+def store(field, as_variable):
+    def predicate(word, state):
+        state[as_variable] = getattr(word, field)
+    return predicate
+
+######################
+# Predicate Modifiers
+######################
+
 class PredicateModifier(object):
-    def __init__(self, predicate, **options):
+
+    def __init__(self, predicate=None, **options):
+        if predicate is not None and not callable(predicate):
+            raise ValueError("Predicate must be callable")
         self.predicate = predicate
         self.options = options
 
@@ -54,12 +89,67 @@ class PredicateModifier(object):
     def is_zero_length(self):
         return False
 
+
 class Once(PredicateModifier):
+
     def parse(self, index, sentence, state):
         matched = self.predicate(sentence.rich_words[index], state)
         if matched:
             index += 1
         return matched, index
+
+class PredicateCombination(PredicateModifier):
+    def __init__(self, *predicates, **options):
+        PredicateModifier.__init__(self)
+        self.predicates = predicates
+
+class And(PredicateCombination):
+
+    def parse(self, index, sentence, state):
+        matched = True
+        for predicate in self.predicates:
+            if not predicate(sentence.rich_words[index], state):
+                matched = False
+                break
+        if matched:
+            index += 1
+        return matched, index
+        
+class Or(PredicateCombination):
+
+    def parse(self, index, sentence, state):
+        matched = False
+        for predicate in self.predicates:
+            if predicate(sentence.rich_words[index], state):
+                matched = True
+                break
+        if matched:
+            index += 1
+        return matched, index
+        
+class ZeroWidth(PredicateModifier):
+    '''
+    Match word without moving to next word. Can be used to manipulate state.
+    '''
+    def parse(self, index, sentence, state):
+        matched = self.predicate(sentence.rich_words[index], state)
+        return matched, index
+
+class Conditional(Once):
+    '''
+    If condition obtains, match against predicate and move to the
+    next word, as in Once; otherwise do nothing
+    '''
+    def __init__(self, predicate, condition, **options):
+        Once.__init__(self, predicate, **options)
+        self.condition = condition
+
+    def parse(self, index, sentence, state):
+        if self.condition(state):
+            return Once.parse(self, index, sentence, state)
+        else:
+            return True, index
+
 
 class Repeated(PredicateModifier):
     unlimited = -1
@@ -79,7 +169,8 @@ class Repeated(PredicateModifier):
             current_word = sentence.rich_words[index]
             if not self.greedy and not state.lookahead and \
                     next_predicate is not None:
-                if next_predicate.lookahead(index, sentence, state):
+                if next_predicate.lookahead(index, sentence, state) \
+                        and index - original_index >= self.at_least:
                     break
 
             if not self.at_most == Repeated.unlimited:
@@ -97,6 +188,7 @@ class Repeated(PredicateModifier):
     def is_zero_length(self):
         return self.at_least == 0
 
+
 class AnyNumberOf(Repeated):
     '''
     An alias for Repeated(0, unlimited), for clarity
@@ -105,28 +197,62 @@ class AnyNumberOf(Repeated):
         Repeated.__init__(self, predicate, at_least=0, 
                 at_most=Repeated.unlimited, greedy=greedy, **options)
 
+class Optional(Repeated):
+    def __init__(self, predicate, **options):
+        Repeated.__init__(self, predicate, greedy=True,
+                at_least=0, at_most=1, **options)
+
+
+#################
+# Generic Filter
+#################
+
 class GenericFilter(Filter):
 
     predicates = []
     internal = ['next_predicate']
     private = []
+    counted_features = []
 
     def __init__(self):
         Filter.__init__(self)
         if len(self.predicates) == 0:
             raise NotImplementedError("Must provide at least one predicate")
-        self.predicates = [self.wrap_in_modifier(x) for x in self.predicates]
+        self.normalize_predicates()
+        self.normalize_counted_features()
+        self.setup_counts()
 
-    def wrap_in_modifier(self, predicate):
-        if not isinstance(predicate, PredicateModifier):
-            return Once(predicate)
-        else:
-            return predicate
+    def normalize_counted_features(self):
+        normalized = []
+        for feature in self.counted_features:
+            if isinstance(feature, basestring):
+                normalized.append(((feature,), None))
+            else: # tuple
+                features, limit = feature
+                if isinstance(features, basestring):
+                    features = (features,)
+                normalized.append((features, limit))
+        self.counted_features = normalized
+
+    def setup_counts(self):
+        self.counts = {}
+        for features, limit in self.counted_features:
+            self.counts[features] = {}
+
+    def normalize_predicates(self):
+        normalized = []
+        for predicate in self.predicates:
+            if not isinstance(predicate, PredicateModifier):
+                normalized.append(Once(predicate))
+            else:
+                normalized.append(predicate)
+        self.predicates = normalized
 
     def process(self, sentence):
         state = State()
         index = 0
         predicate_index = 0
+        last_index_outside_match = 0
         while index != len(sentence.rich_words):
             predicate = self.predicates[predicate_index]
             old_index = index
@@ -140,16 +266,14 @@ class GenericFilter(Filter):
             matched, index = predicate.parse(index, sentence, state)
 
             if matched:
-                if debug:
-                    print '%d: %d -> %d' % (predicate_index, old_index, index)
+                #print '%d: %d -> %d' % (predicate_index, old_index, index)
                 predicate_index += 1
                 if predicate.options.get('highlight', False):
                     sentence.highlight = (old_index, index - 1)
             else:
-                if debug:
-                    print
-                assert index == old_index, "Index shouldn't change if no match"
-                index += 1
+                #print
+                last_index_outside_match += 1   # Rudimentary backtracking
+                index = last_index_outside_match
                 predicate_index = 0
                 state = State()
 
@@ -159,16 +283,34 @@ class GenericFilter(Filter):
         rest_are_zero = all(p.is_zero_length() for \
                 p in self.predicates[predicate_index:]) 
         if predicate_index == len(self.predicates) or rest_are_zero:
+            keep_sentence = self.update_counts(state)
+            self.post_process(sentence)
             for key, value in state.items():
                 if key not in self.private + self.internal:
                     sentence.metadata[key] = state[key]
-            self.post_process(sentence)
-            return True
+            return keep_sentence
         else:
             return False
 
+    def update_counts(self, state):
+        keep_sentence = False
+        for features, limit in self.counted_features:
+            value = tuple(state[f] for f in features)
+            count = self.counts[features]
+            count[value] = count.get(value, 0) + 1
+            if limit is None or count[value] <= limit:
+                keep_sentence = True
+        if len(self.counted_features) == 0:
+            keep_sentence = True
+        return keep_sentence
+
     def post_process(self, sentence):
         pass
+
+
+##################
+# Filter Examples
+##################
 
 class Bishvil(GenericFilter):
 
@@ -227,7 +369,7 @@ class YeshDative(GenericFilter):
             return True
 
     predicates = [
-        OneOf('word', (u'יש', u'אין'), export_field='lemma'),
+        one_of('word', (u'יש', u'אין'), export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
     ]
 
@@ -240,21 +382,66 @@ class NatanDative(GenericFilter):
         return word.word not in infinitives
 
     predicates = [
-            Equal('lemma', u'נתן'),
+            equal('lemma', u'נתן'),
             Once(is_dative_wrapped, highlight=True),
-            AnyNumberOf(Equal('chunk', 'I-NP')),
-            OneOf('chunk', ['B-NP', 'I-NP']),
-            AnyNumberOf(Equal('chunk', 'I-NP')),
+            AnyNumberOf(equal('chunk', 'I-NP')),
+            one_of('chunk', ['B-NP', 'I-NP']),
+            AnyNumberOf(equal('chunk', 'I-NP')),
             not_infinitive
         ]
 
 
-
 governed_preps = {
     u'אכל': u'את',
-    u'הרס': u'את',
+    u'בדק': u'את',
+    u'בהה': u'ב',
+    u'בעט': u'ב',
+    u'דחף': u'את',
+    u'דרך': u'על',
+    u'הזיז': u'את',
+    u'החזיק': u'ב',
+    u'הסתכל': u'על',
+    u'הציף': u'את',
     u'הרים': u'את',
-    u'הסתכל': u'על'
+    u'הרס': u'את',
+    u'זז': u'על',
+    u'חימם': u'את',
+    u'חסם': u'את',
+    u'חתך': u'את',
+    u'חתם': u'על',
+    u'טייל': u'על',
+    u'יצא': u'מ',
+    u'ירד': u'מ',
+    u'ישב': u'על',
+    u'כיסה': u'את',
+    u'מילא': u'את',
+    u'משך': u'את',
+    u'משך': u'ב',
+    u'נגע': u'ב',
+    u'נדבק': (u'ל', u'אל'),
+    u'ניגב': u'את',
+    u'ניפח': u'את',
+    u'ניקה': u'את',
+    u'נכנס': (u'ל', u'אל'),
+    u'נפל': u'על',
+    u'סובב': u'את',
+    u'עזב': u'את',
+    u'עלה': (u'ל', u'אל'),
+    u'פגע': u'ב',
+    u'פתח': u'את',
+    u'צבע': u'את',
+    u'צחק': u'על',
+    u'צילם': u'את',
+    u'קרע': u'את',
+    u'קשר': u'את',
+    u'ראה': u'את',
+    u'שבר': u'את',
+    u'שטף': u'את',
+    u'שיבש': u'את',
+    u'תלש': u'את',
+    u'תקע': u'את',
+    u'שיחק': u'ב',
+    u'תלש': u'את'
 }
 
 for key in governed_preps.keys():
@@ -266,26 +453,68 @@ def is_the_expected_preposition(word, state):
         return False
 
     expected_prepositions = governed_preps[state['verb']]
-    return len(set((word.lemma, word.prefix)) & set(expected_prepositions)) > 0
+    match = len(set((word.lemma, word.prefix)) & \
+            set(expected_prepositions)) > 0
+    return match
 
-class PossessiveDative(GenericFilter):
+def store_possessum(word, state):
+    pronouns = {
+        '1sm': u'אני',
+        '1sf': u'אני',
+        '2sm': u'אתה',
+        '2sf': u'את',
+        '3sm': u'הוא',
+        '3sf': u'היא',
+        '1pm': u'אנחנו',
+        '1pf': u'אנחנו',
+        '2pm': u'אתם',
+        '2pf': u'אתן',
+        '3pm': u'הם',
+        '3pf': u'הן'
+    }
 
+    if word.suftype == 'pron':
+        pron_repr = '%s%s%s' % (word.sufperson, word.sufnum, word.sufgen)
+        state['possessum'] = pronouns[pron_repr]
+    else:
+        state['possessum'] = word.lemma
+    return True
+
+def set_in_chunk(word, state):
+    state['in_chunk'] = word.chunk == 'B-NP' and word.word != u'את'
+    # chunker behaves differently for את and על
+    if state['in_chunk']:
+        store_possessum(word, state)
+    return True
+
+class PossessiveDativeWithPronoun(GenericFilter):
+    private = ['in_chunk']
     predicates = [
-            OneOf('lemma', set(governed_preps.keys()), export_field='verb'),
-            Once(is_dative_wrapped, highlight=True),
-            AnyNumberOf(Equal('chunk', 'I-NP')),
-            is_the_expected_preposition
-        ]
+        Once(one_of('lemma', set(governed_preps.keys()),
+            export_field='verb')),
+        Once(one_of('word', lamed_fused_forms), highlight=True),
+        AnyNumberOf(equal('chunk', 'I-NP')),
+        And(is_the_expected_preposition, set_in_chunk),
+        Conditional(store_possessum, lambda s: not s['in_chunk']),
+        Once(not_equal('chunk', 'I-NP'))
+    ]
 
-class Genitive(GenericFilter):
+class GenitiveWithPronoun(GenericFilter):
+    private = ['in_chunk']
     predicates = [
-            Once(OneOf('lemma', set(governed_preps.keys()),
-                export_field='verb'), highlight=True),
-            is_the_expected_preposition,
-            AnyNumberOf(Equal('chunk', 'I-NP')),
-            Once(Equal('pos', 'shel-preposition'))
-        ]
+        Once(one_of('lemma', set(governed_preps.keys()),
+            export_field='verb'), highlight=True),
+        ZeroWidth(set_in_chunk),
+        Once(is_the_expected_preposition),
+        Conditional(store_possessum, lambda s: not s['in_chunk']),
+        And(equal('pos', 'shel-preposition'),
+            one_of('word', shel_fused_forms))
+    ]
 
+
+########
+# Tests
+########
 
 class DS(object):
     'Dummy Sentence'
@@ -331,6 +560,27 @@ class Tests(unittest.TestCase):
     def test_anything(self):
         self.t([eq('a'), Repeated(anything, 5, 5), eq('d')])
 
+    def test_simple_backtracking(self):
+        self.t([eq('c'), eq('d')])
+
+    def test_conditional(self):
+        class TestFilter(GenericFilter):
+            def set_state(x, s):
+                s['b_after_2b'] = x == 'b'
+                return True
+            predicates = [Repeated(eq('b'), 1, 1),
+                    ZeroWidth(set_state),
+                    Once(anything),
+                    Conditional(lambda x, s: x == 'c', 
+                        lambda s: s['b_after_2b'])]
+        self.assertTrue(TestFilter().process(self.sentence))
+
+    def test_optional_no(self):
+        self.t([Repeated(eq('b'), 3, 3), Optional(eq('q')), eq('c')])
+
+    def test_optional_yes(self):
+        self.t([eq('b'), Optional(eq('c')), Optional(eq('c')), eq('d')])
+
     def runTest(self):
         self.test_repeated()
         self.test_anynumber()
@@ -340,3 +590,7 @@ class Tests(unittest.TestCase):
         self.test_greedy()
         self.test_notgreedy2()
         self.test_anything()
+        self.test_simple_backtracking()
+        self.test_conditional()
+        self.test_optional_no()
+        self.test_optional_yes()

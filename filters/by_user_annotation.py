@@ -33,7 +33,8 @@ def mix_attributes(attributes, sentences, limit):
 class ByAttributeAnnotation(Annotation):
 
     def __init__(self, description, attributes, single_workbook=False,
-            single_workbook_name='All', min_tokens=2, max_tokens=3000):
+            single_workbook_name='All', min_tokens=2, max_tokens=3000,
+            **options):
         '''
         single_workbook: if True, all attribute values will be on the same
             workbook, as sheets; otherwise create separate files for each value
@@ -44,7 +45,7 @@ class ByAttributeAnnotation(Annotation):
             tokens of this value have been written
         '''
 
-        Annotation.__init__(self, description)
+        Annotation.__init__(self, description, **options)
         self.attributes = attributes
         self.single_workbook = single_workbook
         self.single_workbook_name = single_workbook_name
@@ -65,8 +66,8 @@ class ByAttributeAnnotation(Annotation):
                     value, sentences in d.items())
 
 class MixUsers(Annotation):
-    def __init__(self, limit=10000):
-        Annotation.__init__(self)
+    def __init__(self, limit=10000, **options):
+        Annotation.__init__(self, **options)
         self.limit = limit
 
     def create_workbooks(self):
