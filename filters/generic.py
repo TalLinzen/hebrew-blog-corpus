@@ -5,6 +5,7 @@ import unittest
 
 clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
+debug = False
 
 class State(dict):
     
@@ -18,6 +19,9 @@ class State(dict):
 
 def is_obstructor(word, state):
     return word.pos == 'punctuation' or word.prefix in (u'ש', u'וש')
+
+def anything(word, state):
+    return True
 
 def Equal(field, value):
     def predicate(word, state):
@@ -37,14 +41,14 @@ def OneOf(field, values, export_field=None):
     return predicate
 
 class PredicateModifier(object):
-    def __init__(self, predicate, options={}):
+    def __init__(self, predicate, **options):
         self.predicate = predicate
         self.options = options
 
     def lookahead(self, index, sentence, state):
         state.lookahead = True
         matched, index = self.parse(index, sentence, state)
-        state.looakeahd = False
+        state.lookahead = False
         return matched
 
     def is_zero_length(self):
@@ -61,8 +65,8 @@ class Repeated(PredicateModifier):
     unlimited = -1
 
     def __init__(self, predicate, at_least=0, at_most=unlimited,
-            greedy=False, options={}):
-        PredicateModifier.__init__(self, predicate, options)
+            greedy=False, **options):
+        PredicateModifier.__init__(self, predicate, **options)
         self.at_least = at_least
         self.at_most = at_most
         self.greedy = greedy
@@ -97,14 +101,15 @@ class AnyNumberOf(Repeated):
     '''
     An alias for Repeated(0, unlimited), for clarity
     '''
-    def __init__(self, predicate, greedy=False, options={}):
+    def __init__(self, predicate, greedy=False, **options):
         Repeated.__init__(self, predicate, at_least=0, 
-                at_most=Repeated.unlimited, greedy=greedy, options=options)
+                at_most=Repeated.unlimited, greedy=greedy, **options)
 
 class GenericFilter(Filter):
 
     predicates = []
-    private_variables = []
+    internal = ['next_predicate']
+    private = []
 
     def __init__(self):
         Filter.__init__(self)
@@ -135,10 +140,14 @@ class GenericFilter(Filter):
             matched, index = predicate.parse(index, sentence, state)
 
             if matched:
+                if debug:
+                    print '%d: %d -> %d' % (predicate_index, old_index, index)
                 predicate_index += 1
                 if predicate.options.get('highlight', False):
                     sentence.highlight = (old_index, index - 1)
             else:
+                if debug:
+                    print
                 assert index == old_index, "Index shouldn't change if no match"
                 index += 1
                 predicate_index = 0
@@ -151,7 +160,7 @@ class GenericFilter(Filter):
                 p in self.predicates[predicate_index:]) 
         if predicate_index == len(self.predicates) or rest_are_zero:
             for key, value in state.items():
-                if value not in self.private_variables:
+                if key not in self.private + self.internal:
                     sentence.metadata[key] = state[key]
             self.post_process(sentence)
             return True
@@ -178,7 +187,7 @@ class Bishvil(GenericFilter):
         return good
 
     predicates = [
-        (bishvil, {'highlight': True}),
+        Once(bishvil, highlight=True),
         not_conjunction
     ]
 
@@ -191,7 +200,8 @@ lamed_quasi_pronouns = [u'לאנשים', u'לדברים', u'לזה']
 
 def is_dative_wrapped(word, state):
     if is_dative(word):
-        if word.word in lamed_fused_forms or word.word in lamed_reflexive_fused_forms:
+        if word.word in lamed_fused_forms or \
+                word.word in lamed_reflexive_fused_forms:
             state['argument'] = 'pronoun'
         elif word.word in lamed_quasi_pronouns:
             state['argument'] = 'quasi'
@@ -218,7 +228,7 @@ class YeshDative(GenericFilter):
 
     predicates = [
         OneOf('word', (u'יש', u'אין'), export_field='lemma'),
-        (is_dative_wrapped, {'highlight': True})
+        Once(is_dative_wrapped, highlight=True)
     ]
 
 class NatanDative(GenericFilter):
@@ -231,7 +241,7 @@ class NatanDative(GenericFilter):
 
     predicates = [
             Equal('lemma', u'נתן'),
-            (is_dative_wrapped, {'highlight': True}),
+            Once(is_dative_wrapped, highlight=True),
             AnyNumberOf(Equal('chunk', 'I-NP')),
             OneOf('chunk', ['B-NP', 'I-NP']),
             AnyNumberOf(Equal('chunk', 'I-NP')),
@@ -262,17 +272,18 @@ class PossessiveDative(GenericFilter):
 
     predicates = [
             OneOf('lemma', set(governed_preps.keys()), export_field='verb'),
-            (is_dative_wrapped, {'highlight': True}),
+            Once(is_dative_wrapped, highlight=True),
             AnyNumberOf(Equal('chunk', 'I-NP')),
             is_the_expected_preposition
         ]
 
 class Genitive(GenericFilter):
     predicates = [
-            (OneOf('lemma', set(governed_preps.keys()), export_field='verb'), {'highlight': True}),
+            Once(OneOf('lemma', set(governed_preps.keys()),
+                export_field='verb'), highlight=True),
             is_the_expected_preposition,
             AnyNumberOf(Equal('chunk', 'I-NP')),
-            is_shel
+            Once(Equal('pos', 'shel-preposition'))
         ]
 
 
@@ -314,6 +325,12 @@ class Tests(unittest.TestCase):
             predicates = [Repeated(eq('b'), greedy=True), eq('b')]
         self.assertFalse(TestFilter().process(self.sentence))
 
+    def test_notgreedy2(self):
+        self.t([AnyNumberOf(anything), eq('b'), AnyNumberOf(anything)])
+
+    def test_anything(self):
+        self.t([eq('a'), Repeated(anything, 5, 5), eq('d')])
+
     def runTest(self):
         self.test_repeated()
         self.test_anynumber()
@@ -321,3 +338,5 @@ class Tests(unittest.TestCase):
         self.test_repeat_at_end()
         self.test_notgreedy()
         self.test_greedy()
+        self.test_notgreedy2()
+        self.test_anything()
