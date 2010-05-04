@@ -16,6 +16,7 @@ from filters.subcat_annotation import SubcatAnnotation
 from filters.by_user_annotation import MixUsers, ByAttributeAnnotation
 from filters.count_lemmas import CountLemmas
 from filters.annotation import read_sentence_file, update_annotation_directory
+from filters.generic import *
 from tools.process_annotation import AnnotationProcessor
 from verbs_for_subcat import verbs_for_subcat
 from word_lists import *

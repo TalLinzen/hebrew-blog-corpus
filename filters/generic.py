@@ -6,6 +6,16 @@ import unittest
 clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
 
+class State(dict):
+    
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        self.lookahead = False
+
+    def __setitem__(self, attr, value):
+        if not self.lookahead:
+            dict.__setitem__(self, attr, value)
+
 def is_obstructor(word, state):
     return word.pos == 'punctuation' or word.prefix in (u'ש', u'וש')
 
@@ -27,8 +37,18 @@ def OneOf(field, values, export_field=None):
     return predicate
 
 class PredicateModifier(object):
-    def __init__(self, predicate):
+    def __init__(self, predicate, options={}):
         self.predicate = predicate
+        self.options = options
+
+    def lookahead(self, index, sentence, state):
+        state.lookahead = True
+        matched, index = self.parse(index, sentence, state)
+        state.looakeahd = False
+        return matched
+
+    def is_zero_length(self):
+        return False
 
 class Once(PredicateModifier):
     def parse(self, index, sentence, state):
@@ -39,26 +59,47 @@ class Once(PredicateModifier):
 
 class Repeated(PredicateModifier):
     unlimited = -1
-    def __init__(self, predicate, at_least=0, at_most=unlimited):
-        PredicateModifier.__init__(self, predicate)
+
+    def __init__(self, predicate, at_least=0, at_most=unlimited,
+            greedy=False, options={}):
+        PredicateModifier.__init__(self, predicate, options)
         self.at_least = at_least
         self.at_most = at_most
+        self.greedy = greedy
+
     def parse(self, index, sentence, state):
         original_index = index
-        while self.predicate(sentence.rich_words[index], state) and \
-                (index - original_index <= self.at_most or \
-                self.at_most == Repeated.unlimited):
+        next_predicate = state['next_predicate']
+
+        while index < len(sentence.rich_words):
+            current_word = sentence.rich_words[index]
+            if not self.greedy and not state.lookahead and \
+                    next_predicate is not None:
+                if next_predicate.lookahead(index, sentence, state):
+                    break
+
+            if not self.at_most == Repeated.unlimited:
+                if index - original_index == self.at_most:
+                    break
+
+            if not self.predicate(current_word, state):
+                break
+
             index += 1
 
         matched = index - original_index >= self.at_least
         return matched, index
 
+    def is_zero_length(self):
+        return self.at_least == 0
+
 class AnyNumberOf(Repeated):
     '''
     An alias for Repeated(0, unlimited), for clarity
     '''
-    def __init__(self, predicate):
-        Repeated.__init__(self, predicate, 0, Repeated.unlimited)
+    def __init__(self, predicate, greedy=False, options={}):
+        Repeated.__init__(self, predicate, at_least=0, 
+                at_most=Repeated.unlimited, greedy=greedy, options=options)
 
 class GenericFilter(Filter):
 
@@ -69,13 +110,7 @@ class GenericFilter(Filter):
         Filter.__init__(self)
         if len(self.predicates) == 0:
             raise NotImplementedError("Must provide at least one predicate")
-        self.processed_predicates = []
-        self.predicate_options = []
-        for predicate in self.predicates:
-            if type(predicate) != tuple:
-                self.processed_predicates.append((self.wrap_in_modifier(predicate), {}))
-            else:
-                self.processed_predicates.append((self.wrap_in_modifier(predicate[0]), predicate[1]))
+        self.predicates = [self.wrap_in_modifier(x) for x in self.predicates]
 
     def wrap_in_modifier(self, predicate):
         if not isinstance(predicate, PredicateModifier):
@@ -84,28 +119,37 @@ class GenericFilter(Filter):
             return predicate
 
     def process(self, sentence):
-        state = {}
+        state = State()
         index = 0
-        next_predicate = 0
+        predicate_index = 0
         while index != len(sentence.rich_words):
-            predicate, options = self.processed_predicates[next_predicate]
+            predicate = self.predicates[predicate_index]
             old_index = index
+
+            if predicate_index + 1 == len(self.predicates):
+                state['next_predicate'] = None
+            else:
+                state['next_predicate'] = \
+                        self.predicates[predicate_index + 1]
+
             matched, index = predicate.parse(index, sentence, state)
 
             if matched:
-                next_predicate += 1
-                if options.get('highlight', False):
+                predicate_index += 1
+                if predicate.options.get('highlight', False):
                     sentence.highlight = (old_index, index - 1)
             else:
-                assert index == old_index, "Shouldn't change index if didn't match"
+                assert index == old_index, "Index shouldn't change if no match"
                 index += 1
-                next_predicate = 0
-                state = {}
+                predicate_index = 0
+                state = State()
 
-            if next_predicate == len(self.predicates):
+            if predicate_index == len(self.predicates):
                 break
 
-        if next_predicate == len(self.predicates):
+        rest_are_zero = all(p.is_zero_length() for \
+                p in self.predicates[predicate_index:]) 
+        if predicate_index == len(self.predicates) or rest_are_zero:
             for key, value in state.items():
                 if value not in self.private_variables:
                     sentence.metadata[key] = state[key]
@@ -155,6 +199,16 @@ def is_dative_wrapped(word, state):
             state['argument'] = 'lexical'
         return True
 
+shel_fused_forms = set([u'של' + form for form in clitic_forms_special])
+
+def is_shel(word, state):
+    if word.word == u'של':
+        state['argument'] = 'lexical'
+        return True
+    elif word.word in shel_fused_forms:
+        state['argument'] = 'pronoun'
+        return True
+
 class YeshDative(GenericFilter):
     # Annotate by 'lemma' and 'argument'
     def yesh_or_ein(word, state):
@@ -184,29 +238,43 @@ class NatanDative(GenericFilter):
             not_infinitive
         ]
 
+
+
+governed_preps = {
+    u'אכל': u'את',
+    u'הרס': u'את',
+    u'הרים': u'את',
+    u'הסתכל': u'על'
+}
+
+for key in governed_preps.keys():
+    if isinstance(governed_preps[key], basestring):
+        governed_preps[key] = (governed_preps[key],)
+
+def is_the_expected_preposition(word, state):
+    if word.prefix in (u'ש', u'וש'):
+        return False
+
+    expected_prepositions = governed_preps[state['verb']]
+    return len(set((word.lemma, word.prefix)) & set(expected_prepositions)) > 0
+
 class PossessiveDative(GenericFilter):
-    verbs = {
-        u'אכל': u'את',
-        u'הרס': u'את',
-        u'הרים': u'את',
-        u'הסתכל': u'על'
-    }
-
-    def is_the_expected_preposition(word, state):
-        if word.prefix in (u'ש', u'וש'):
-            return False
-
-        expected_prepositions = PossessiveDative.verbs[state['verb']]
-        if isinstance(expected_prepositions, basestring):
-            expected_prepositions = (expected_prepositions,)
-        return len(set((word.lemma, word.prefix)) & set(expected_prepositions)) > 0
 
     predicates = [
-            OneOf('lemma', set(verbs.keys()), export_field='verb'),
+            OneOf('lemma', set(governed_preps.keys()), export_field='verb'),
             (is_dative_wrapped, {'highlight': True}),
             AnyNumberOf(Equal('chunk', 'I-NP')),
             is_the_expected_preposition
         ]
+
+class Genitive(GenericFilter):
+    predicates = [
+            (OneOf('lemma', set(governed_preps.keys()), export_field='verb'), {'highlight': True}),
+            is_the_expected_preposition,
+            AnyNumberOf(Equal('chunk', 'I-NP')),
+            is_shel
+        ]
+
 
 class DS(object):
     'Dummy Sentence'
@@ -214,27 +282,42 @@ class DS(object):
         self.rich_words = words
         self.metadata = {}
 
+def eq(c):
+    return lambda x, s: x == c
+
 class Tests(unittest.TestCase):
 
-    def test_repeated(self):
-        sentence = DS(list('abbbccd'))
+    sentence = DS(list('abbbccd'))
+
+    def t(self, preds):
         class TestFilter(GenericFilter):
-            predicates = [lambda x: x == 'a',
-                    Repeated(lambda x: x == 'b', 3, 3),
-                    lambda x: x == 'c']
-        tf = TestFilter()
-        self.assertTrue(tf.process(sentence))
+            predicates = preds
+        self.assertTrue(TestFilter().process(self.sentence))
+
+    def test_repeated(self):
+        self.t([eq('a'), Repeated(eq('b'), 3, 3), eq('c')])
 
     def test_anynumber(self):
-        sentence = DS(list('abbbccd'))
+        self.t([AnyNumberOf(eq('o')), Repeated(eq('b'), 1, 4), eq('c')])
+
+    def test_anynumber_at_end(self):
+        self.t([eq('d'), AnyNumberOf(eq('e'))])
+
+    def test_repeat_at_end(self):
+        self.t([Repeated(eq('d'), 1)])
+
+    def test_notgreedy(self):
+        self.t([Repeated(eq('b')), eq('b')])
+
+    def test_greedy(self):
         class TestFilter(GenericFilter):
-            predicates = [
-                    AnyNumberOf(lambda x: x == 'o'),
-                    Repeated(lambda x: x == 'b', 1, 4),
-                    lambda x: x == 'c']
-        tf = TestFilter()
-        self.assertTrue(tf.process(sentence))
+            predicates = [Repeated(eq('b'), greedy=True), eq('b')]
+        self.assertFalse(TestFilter().process(self.sentence))
 
     def runTest(self):
         self.test_repeated()
         self.test_anynumber()
+        self.test_anynumber_at_end()
+        self.test_repeat_at_end()
+        self.test_notgreedy()
+        self.test_greedy()

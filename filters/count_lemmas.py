@@ -9,15 +9,15 @@ class CountLemmas(Filter):
         Lemmas should be utf8 encoded
         '''
         Filter.__init__(self)
-        self.counters = dict((lemma.decode('utf8'), 0) for lemma in lemmas)
+        self.counters = dict((lemma, 0) for lemma in lemmas)
         self.word_limit = word_limit
         self.predicate = predicate
         self.total_word_count = 0
 
     def process(self, sentence):
-        for word in sentence.words:
+        for word in sentence.rich_words:
             if word.lemma in self.counters and \
-                    self.predicate is not None and self.predicate(word):
+                    (self.predicate is None or self.predicate(word)):
                 self.counters[word.lemma] += 1
             self.total_word_count += 1
             if self.total_word_count == self.word_limit:

@@ -29,6 +29,11 @@ class Filter(object):
     def process_many(self, sentences, other_filters=None):
         filters = [self] if other_filters is None else [self] + other_filters
         for index, sentence in enumerate(sentences):
+            some_still_running = False
             for filter in filters:
+                if filter.running:
+                    some_still_running = True
                 filter.process_and_record(sentence)
             sentence.reduce_memory_footprint()
+            if not some_still_running:
+                break
