@@ -7,15 +7,10 @@ from io import BGUFile, BGUDir, BGUQuery, BGUQueries
 from db import setup_connection, WebPage, User
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
-from filters.pd import PossessiveDativeFilter
-from filters.genitive import GenitiveFilter
-from filters.dative import DativeFilter
-from filters.filter import Filter
 from filters.subcat import SubcategorizationFrames
 from filters.subcat_annotation import SubcatAnnotation
-from filters.by_user_annotation import MixUsers, ByAttributeAnnotation
 from filters.count_lemmas import CountLemmas
-from filters.annotation import read_sentence_file, update_annotation_directory
+from filters.annotation import *
 from filters.generic import *
 from tools.process_annotation import AnnotationProcessor
 from verbs_for_subcat import verbs_for_subcat
@@ -68,3 +63,24 @@ def apply_filters_by_age(min_age, max_age, filters, annotator):
         annotator.set_sentences(filter.sentences)
         annotator.write(dirname)
     return filters
+
+def by_age_loop(ages):
+    for min_age, max_age in ages:
+        g = GenitiveWithPronoun()
+        pd = PossessiveDativeWithPronoun()
+        input = BGUQueries(users_by_age(min_age, max_age))
+        pd.process_many(input, [g])
+
+        name = '%dto%d_GenPron' % (min_age, max_age)
+        annotator = ByAttributeAnnotation(name, 'verb', 
+                single_workbook=True, single_workbook_name=name,
+                custom_field='possessum')
+        annotator.set_sentences(g.sentences)
+        annotator.write(name)
+
+        name = '%dto%d_PDPron' % (min_age, max_age)
+        annotator = ByAttributeAnnotation(name, 'verb', 
+                single_workbook=True, single_workbook_name=name,
+                custom_field='possessum')
+        annotator.set_sentences(pd.sentences)
+        annotator.write(name)

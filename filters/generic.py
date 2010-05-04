@@ -7,7 +7,9 @@ clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
 debug = False
 
+########
 # State
+########
 
 class State(dict):
     
@@ -100,7 +102,7 @@ class Once(PredicateModifier):
 
 class PredicateCombination(PredicateModifier):
     def __init__(self, *predicates, **options):
-        PredicateModifier.__init__(self)
+        PredicateModifier.__init__(self, **options)
         self.predicates = predicates
 
 class And(PredicateCombination):
@@ -269,7 +271,10 @@ class GenericFilter(Filter):
                 #print '%d: %d -> %d' % (predicate_index, old_index, index)
                 predicate_index += 1
                 if predicate.options.get('highlight', False):
-                    sentence.highlight = (old_index, index - 1)
+                    state['highlight'] = (old_index, index - 1)
+                on_match = predicate.options.get('on_match')
+                if on_match:
+                    on_match(sentence.rich_words[index - 1], state)
             else:
                 #print
                 last_index_outside_match += 1   # Rudimentary backtracking
@@ -333,12 +338,32 @@ class Bishvil(GenericFilter):
         not_conjunction
     ]
 
-from dative import is_dative
 from .tools.hspell import infinitives
 
 lamed_fused_forms = [u'ל' + form for form in clitic_forms_special]
 lamed_reflexive_fused_forms = [u'לעצמ' + form for form in clitic_forms]
 lamed_quasi_pronouns = [u'לאנשים', u'לדברים', u'לזה']
+shel_fused_forms = set([u'של' + form for form in clitic_forms_special])
+
+false_datives = [
+    u'רגע',
+    u'כבוד',
+    u'צד',
+    u'הנאה'
+]
+
+def is_dative(word, filter_infinitives=True):
+    dative = word.pos == 'noun' and \
+                word.lemma not in false_datives and \
+                word.prefix in (lamed, vav_lamed) \
+                or word.lemma == lamed \
+                or word.base in lamed_fused_forms
+            # Last test is in theory redundant but works around
+            # disambiguation errors
+    if filter_infinitives:
+        return dative and word.word not in infinitives 
+    else:
+        return dative
 
 def is_dative_wrapped(word, state):
     if is_dative(word):
@@ -351,23 +376,8 @@ def is_dative_wrapped(word, state):
             state['argument'] = 'lexical'
         return True
 
-shel_fused_forms = set([u'של' + form for form in clitic_forms_special])
-
-def is_shel(word, state):
-    if word.word == u'של':
-        state['argument'] = 'lexical'
-        return True
-    elif word.word in shel_fused_forms:
-        state['argument'] = 'pronoun'
-        return True
 
 class YeshDative(GenericFilter):
-    # Annotate by 'lemma' and 'argument'
-    def yesh_or_ein(word, state):
-        if word.word in (u'יש', u'אין'):
-            state['lemma'] = word.word
-            return True
-
     predicates = [
         one_of('word', (u'יש', u'אין'), export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
@@ -375,78 +385,44 @@ class YeshDative(GenericFilter):
 
 class NatanDative(GenericFilter):
     # Annotate by 'argument'
-    def noun(word, state):
-        return word.pos == 'noun' and word.word not in infinitives
-
-    def not_infinitive(word, state):
-        return word.word not in infinitives
-
     predicates = [
             equal('lemma', u'נתן'),
             Once(is_dative_wrapped, highlight=True),
             AnyNumberOf(equal('chunk', 'I-NP')),
             one_of('chunk', ['B-NP', 'I-NP']),
             AnyNumberOf(equal('chunk', 'I-NP')),
-            not_infinitive
+            not_one_of('word', infinitives)
         ]
 
+def is_preposition(word, state):
+    clitic_prepositions = set([
+        u'ל',
+        u'ב',
+        u'כ',
+        u'מ'
+    ])
 
-governed_preps = {
-    u'אכל': u'את',
-    u'בדק': u'את',
-    u'בהה': u'ב',
-    u'בעט': u'ב',
-    u'דחף': u'את',
-    u'דרך': u'על',
-    u'הזיז': u'את',
-    u'החזיק': u'ב',
-    u'הסתכל': u'על',
-    u'הציף': u'את',
-    u'הרים': u'את',
-    u'הרס': u'את',
-    u'זז': u'על',
-    u'חימם': u'את',
-    u'חסם': u'את',
-    u'חתך': u'את',
-    u'חתם': u'על',
-    u'טייל': u'על',
-    u'יצא': u'מ',
-    u'ירד': u'מ',
-    u'ישב': u'על',
-    u'כיסה': u'את',
-    u'מילא': u'את',
-    u'משך': u'את',
-    u'משך': u'ב',
-    u'נגע': u'ב',
-    u'נדבק': (u'ל', u'אל'),
-    u'ניגב': u'את',
-    u'ניפח': u'את',
-    u'ניקה': u'את',
-    u'נכנס': (u'ל', u'אל'),
-    u'נפל': u'על',
-    u'סובב': u'את',
-    u'עזב': u'את',
-    u'עלה': (u'ל', u'אל'),
-    u'פגע': u'ב',
-    u'פתח': u'את',
-    u'צבע': u'את',
-    u'צחק': u'על',
-    u'צילם': u'את',
-    u'קרע': u'את',
-    u'קשר': u'את',
-    u'ראה': u'את',
-    u'שבר': u'את',
-    u'שטף': u'את',
-    u'שיבש': u'את',
-    u'תלש': u'את',
-    u'תקע': u'את',
-    u'שיחק': u'ב',
-    u'תלש': u'את'
-}
+    if word.prefix == u'ש':
+        return False
 
-for key in governed_preps.keys():
-    if isinstance(governed_preps[key], basestring):
-        governed_preps[key] = (governed_preps[key],)
+    if word.pos == 'at-preposition' or word.pos == 'preposition':
+        state['preposition'] = word.lemma
+        return True
+    elif word.prefix in clitic_prepositions:
+        state['preposition'] = word.prefix
+        return True
+
+from .word_lists.possession import governed_preps, black_list
+
+class AnyDativeWithPronoun(GenericFilter):
+    predicates = [
+        And(not_one_of('lemma', black_list),
+            equal('pos', 'verb'), on_match=store('lemma', 'verb'),
+            highlight=True),
+        Once(one_of('word', lamed_fused_forms)),
+        Once(is_preposition)
+    ]
+
 
 def is_the_expected_preposition(word, state):
     if word.prefix in (u'ש', u'וש'):
@@ -459,14 +435,13 @@ def is_the_expected_preposition(word, state):
 
 def store_possessum(word, state):
     pronouns = {
-        '1sm': u'אני',
+        '1smf': u'אני',
         '1sf': u'אני',
         '2sm': u'אתה',
         '2sf': u'את',
         '3sm': u'הוא',
         '3sf': u'היא',
-        '1pm': u'אנחנו',
-        '1pf': u'אנחנו',
+        '1pmf': u'אנחנו',
         '2pm': u'אתם',
         '2pf': u'אתן',
         '3pm': u'הם',
@@ -475,7 +450,7 @@ def store_possessum(word, state):
 
     if word.suftype == 'pron':
         pron_repr = '%s%s%s' % (word.sufperson, word.sufnum, word.sufgen)
-        state['possessum'] = pronouns[pron_repr]
+        state['possessum'] = pronouns.get(pron_repr, pron_repr)
     else:
         state['possessum'] = word.lemma
     return True
