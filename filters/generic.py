@@ -412,11 +412,11 @@ def is_preposition(word, state):
         state['preposition'] = word.prefix
         return True
 
-from .word_lists.possession import governed_preps, black_list
+from .data.word_lists import governed_preps, possession_black_list
 
 class AnyDativeWithPronoun(GenericFilter):
     predicates = [
-        And(not_one_of('lemma', black_list),
+        And(not_one_of('lemma', possession_black_list),
             equal('pos', 'verb'), on_match=store('lemma', 'verb'),
             highlight=True),
         Once(one_of('word', lamed_fused_forms)),

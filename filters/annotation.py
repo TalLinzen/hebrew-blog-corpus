@@ -1,4 +1,4 @@
-import os, json
+import os, json, re
 from datetime import datetime
 from pyExcelerator import XFStyle, Alignment, UnicodeUtils, Workbook, parse_xls
 from .io import BGUSentence
@@ -58,10 +58,12 @@ class Annotation(object):
     center_alignment.direction = Alignment.DIRECTION_RL
     center.alignment = center_alignment
 
-    def __init__(self, description, custom_field=None):
+    def __init__(self, description, sentences=None, custom_field=None):
         self.workbooks = {}
         self.description = description
         self.custom_field = custom_field
+        if sentences:
+            self.set_sentences(sentences)
 
     def set_sentences(self, sentences):
         if len(sentences) == 0:
@@ -103,18 +105,27 @@ class Annotation(object):
             custom_data = self.custom_field(sentence)
         sheet.write(row, 6, custom_data, self.right)
 
+    def escape_name(self, name):
+        safe_name = re.sub(r'[/\?\*]', '_', name)
+        if safe_name != name:
+            print 'Renamed "%s" to "%s"' % (name, safe_name)
+        return safe_name
 
-    def write(self, dirname):
+    def write(self, dirname=None):
+
+        if dirname is None:
+            dirname = self.description
 
         self.create_workbooks()
         dir = self.safe_mkdir(dirname)
 
         for workbook_name, sheets in self.workbooks.items():
 
-            print 'Adding workbook', workbook_name
+            workbook_name = self.escape_name(workbook_name)
             workbook = Workbook()
 
             for sheet_name, sentences in sorted(sheets.items()):
+                sheet_name = self.escape_name(sheet_name)
                 sheet = workbook.add_sheet(sheet_name)
                 sheet.col(1).width = 0x3000
                 sheet.col(3).width = 0x3000
@@ -168,13 +179,13 @@ def mix_attributes(attributes, sentences, limit):
 
 class ByAttributeAnnotation(Annotation):
 
-    def __init__(self, description, attributes, single_workbook=False,
-            single_workbook_name='All', min_tokens=2, max_tokens=3000,
-            **options):
+    def __init__(self, description, attributes, inner_attributes=None,
+            single_workbook=False, single_workbook_name=None, min_tokens=2,
+            max_tokens=3000, **options):
         '''
         single_workbook: if True, all attribute values will be on the same
             workbook, as sheets; otherwise create separate files for each value
-        single_file_name: name to give single workbook, if applicable
+        single_workbook_name: name to give single workbook, if applicable
         min_tokens: if attribute value has less than this number of occurences
             don't create a sheet for it
         max_tokens: stop writing sentences to sheet after this amount of
@@ -183,23 +194,42 @@ class ByAttributeAnnotation(Annotation):
 
         Annotation.__init__(self, description, **options)
         self.attributes = attributes
+        if single_workbook and inner_attributes:
+            raise ValueError("single_workbook and inner_attributes " \
+                    "cannot both be set")
         self.single_workbook = single_workbook
+        self.inner_attributes = inner_attributes
         self.single_workbook_name = single_workbook_name
         self.min_tokens = min_tokens
         self.max_tokens = max_tokens
+        self.workbooks = {}
 
     def create_workbooks(self):
         by_attributes = group_by_attributes(self.attributes, self.sentences)
         d = {}
         for value, sentences in by_attributes.items():
-            if len(sentences) >= self.min_tokens:
-                d[value] = mix_attributes('user', sentences, self.max_tokens)
+            if self.inner_attributes is not None:
+                by_inner = group_by_attributes(self.inner_attributes,
+                        sentences)
+                inner_d = {}
+                for inner, inner_sentences in by_inner.items():
+                    if len(inner_sentences) >= self.min_tokens:
+                        inner_d[inner] = mix_attributes(
+                                'user', inner_sentences, self.max_tokens)
+                if len(inner_d) > 0:
+                    self.workbooks[value] = inner_d
+            else:
+                if len(sentences) >= self.min_tokens:
+                    d[value] = mix_attributes(
+                            'user', sentences, self.max_tokens)
 
-        if self.single_workbook:
-            self.workbooks = {self.single_workbook_name: d}
-        else:
-            self.workbooks = dict((value, {value: sentences}) for \
-                    value, sentences in d.items())
+        if self.inner_attributes is None:
+            if self.single_workbook:
+                name = self.single_workbook_name or self.description
+                self.workbooks = {name: d}
+            else:
+                self.workbooks = dict((value, {value: sentences}) for \
+                        value, sentences in d.items())
 
 class MixUsers(Annotation):
     def __init__(self, limit=10000, **options):

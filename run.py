@@ -14,7 +14,7 @@ from filters.annotation import *
 from filters.generic import *
 from tools.process_annotation import AnnotationProcessor
 from verbs_for_subcat import verbs_for_subcat
-from word_lists import *
+from data.word_lists import *
 
 cleaner = IsrablogCleaner()
 harvester = IsrablogHarvester()
