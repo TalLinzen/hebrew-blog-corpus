@@ -180,7 +180,8 @@ def mix_attributes(attributes, sentences, limit):
 class ByAttributeAnnotation(Annotation):
 
     def __init__(self, description, attributes, inner_attributes=None,
-            single_workbook=False, single_workbook_name=None, min_tokens=2,
+            mode='split_notebooks', single_workbook_name=None,
+            single_sheet=False, min_tokens=2,
             max_tokens=3000, **options):
         '''
         single_workbook: if True, all attribute values will be on the same
@@ -194,10 +195,15 @@ class ByAttributeAnnotation(Annotation):
 
         Annotation.__init__(self, description, **options)
         self.attributes = attributes
-        if single_workbook and inner_attributes:
-            raise ValueError("single_workbook and inner_attributes " \
-                    "cannot both be set")
-        self.single_workbook = single_workbook
+
+        if mode not in ('split_workbooks', 'single_workbook', 'single_sheet'):
+            raise ValueError('unknown mode "%s"' % mode)
+
+        if mode != 'split_workbooks' and inner_attributes:
+            raise ValueError('inner_attributes can only be set when' \
+                    'mode is "split_workbooks"')
+
+        self.mode = mode
         self.inner_attributes = inner_attributes
         self.single_workbook_name = single_workbook_name
         self.min_tokens = min_tokens
@@ -223,13 +229,19 @@ class ByAttributeAnnotation(Annotation):
                     d[value] = mix_attributes(
                             'user', sentences, self.max_tokens)
 
+        name = self.single_workbook_name or self.description
         if self.inner_attributes is None:
-            if self.single_workbook:
-                name = self.single_workbook_name or self.description
+            if self.mode == 'single_workbook':
                 self.workbooks = {name: d}
-            else:
+            elif self.mode == 'single_sheet':
+                values = [x[1] for x in sorted(d.items())]
+                values = reduce(lambda x, y: x + y, values)
+                self.workbooks = {name: {name: values}}
+            elif self.mode == 'split_workbooks':
                 self.workbooks = dict((value, {value: sentences}) for \
                         value, sentences in d.items())
+            else:
+                assert 0, 'Invalid mode %s' % self.mode
 
 class MixUsers(Annotation):
     def __init__(self, limit=10000, **options):

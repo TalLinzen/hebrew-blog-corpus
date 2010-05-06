@@ -423,6 +423,17 @@ class AnyDativeWithPronoun(GenericFilter):
         Once(is_preposition)
     ]
 
+class ReflexiveDative(GenericFilter):
+    predicates = [
+        And(not_one_of('lemma', possession_black_list),
+            equal('pos', 'verb'),
+            equal('person', '1'),
+            equal('number', 's'),
+            on_match=store('lemma', 'verb'),
+            highlight=True),
+        Once(equal('word', u'לי')),
+        Once(is_preposition)
+    ]
 
 def is_the_expected_preposition(word, state):
     if word.prefix in (u'ש', u'וש'):
@@ -473,6 +484,8 @@ class PossessiveDativeWithPronoun(GenericFilter):
         Conditional(store_possessum, lambda s: not s['in_chunk']),
         Once(not_equal('chunk', 'I-NP'))
     ]
+
+
 
 class GenitiveWithPronoun(GenericFilter):
     private = ['in_chunk']

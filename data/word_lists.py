@@ -1,111 +1,76 @@
 # -*- coding: utf-8 -*-
 
-body_parts = [
-    u'לב',
-    u'ראש',
-    u'עין',
-    u'כבד',
-    u'מוח',
-    u'פרצוף',
-    u'בטן',
-    u'טחול',
-    u'רגל',
-    u'אוזן',
-    u'שן',
-    u'דופק',
-    u'גרון',
-    u'ציפורן',
-    u'ברך',
-    u'ציץ',
-    u'ציצי',
-    u'חזה',
-    u'גב',
-    u'שד',
-    u'שדי',
-    u'תחת',
-    u'כליה',
-    u'צלע',
-    u'גולגולת',
-    u'יבלת',
-    u'זנב',
-    u'זקן',
-    u'שיער',
-    u'ביצה',
-    u'צוואר',
-    u'לשון',
-    u'טוסיק',
-    u'מוח',
-    u'חיך',
-    u'גוף',
-    u'אף',
-    u'איבר',
-    u'וריד',
-    u'קרקפת',
-    u'פה',
-    u'זין',
-    u'בולבול',
-    u'מצח',
-    u'ריאה',
-    u'עורק',
-    u'פטמה',
-    u'נפש',
-    u'נשמה',
-    u'שערה',
-    u'מותן',
-    u'עור',
-    u'כתף',
-    u'ריס',
-    u'גבה',
-    u'שפה',
-    u'נחיר',
-    u'ושט',
-    u'ירך',
-    u'לסת',
-    u'עצם'
-]
+import codecs, os
+from .conf import data_dir
+
+def csv_read(filename):
+    # Very simple CSV! Don't put commas in fields
+    handle = codecs.open(os.path.join(data_dir, filename), encoding='utf8')
+    lines = []
+    for line in handle.readlines():
+        words = []
+        for word in line.strip().split(','):
+            if word[0] == '"':
+                word = word[1:]
+            if word[-1] == '"':
+                word = word[:-1]
+            words.append(word)
+        lines.append(tuple(words))
+    return lines
+
+def csv_read_list(filename):
+    return [x[0] for x in csv_read(filename)]
+
+def csv_read_set(filename):
+    return set(csv_read_list(filename))
+
+def csv_read_dict(filename):
+    return dict(csv_read(filename))
+
+body_parts = csv_read_set('body_parts.csv')
 
 subcat_candidates = [
-    u'וידא',
-    u'ניחש',
-    u'נטה',
-    u'מיעט',
+    u'אהב',
     u'אחז',
-    u'התפתה',
-    u'ציין',
-    u'התעסק',
-    u'נקט',
-    u'הצהיר',
-    u'התבשר',
-    u'חייג',
-    u'כרסם',
-    u'טעם',
-    u'הכחיש',
-    u'התחרט',
-    u'התגעגע',
-    u'פגש',
-    u'התקרב',
-    u'התריע',
     u'החליט',
-    u'קיווה',
-    u'התעקש',
-    u'ניסה',
-    u'התנדב',
-    u'תכנן',
+    u'הכחיש',
+    u'הכריז',
+    u'הצהיר',
     u'הצטער',
     u'השתוקק',
+    u'התבשר',
+    u'התגעגע',
+    u'התחרט',
+    u'התלהב'
+    u'התנגד',
+    u'התנדב',
+    u'התעסק',
+    u'התעקש',
+    u'התפתה',
+    u'התקרב',
+    u'התרגל',
+    u'התריע',
+    u'וידא',
     u'זכר',
-    u'נזכר',
-    u'סיים',
-    u'הכריז',
-    u'שנא',
-    u'אהב',
+    u'חייג',
     u'חפץ',
     u'חקר',
-    u'סרב',
+    u'טעם',
+    u'כרסם',
+    u'מיעט',
+    u'נזכר',
+    u'נטה',
+    u'ניחש',
+    u'ניסה',
+    u'נקט',
+    u'סיים',
     u'סירב',
-    u'התרגל',
-    u'התנגד',
-    u'התלהב'
+    u'סרב',
+    u'פגש',
+    u'ציין',
+    u'קיווה',
+    u'שנא',
+    u'תכנן',
 ]
 
 possession_black_list = set([
@@ -165,6 +130,7 @@ governed_preps = {
     u'הציף': u'את',
     u'הרים': u'את',
     u'הרס': u'את',
+    u'השתלט': u'על',
     u'זז': u'על',
     u'חימם': u'את',
     u'חסם': u'את',
@@ -199,11 +165,16 @@ governed_preps = {
     u'שבר': u'את',
     u'שטף': u'את',
     u'שיבש': u'את',
+    u'שיחק': u'ב',
     u'תלש': u'את',
     u'תקע': u'את',
     u'שיחק': u'ב',
     u'תלש': u'את'
 }
+
+# All dative with only pronouns, ages 23 to 40, which had at least
+# 5 occurences for a specific frame (preposition after dative)
+pd_verbs = csv_read_dict('possessive_dative_verbs.csv')
 
 for key in governed_preps.keys():
     if isinstance(governed_preps[key], basestring):

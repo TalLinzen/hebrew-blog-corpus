@@ -46,14 +46,17 @@ def pufc(count, n=1000, rev=True):
 def age_histogram():
     return WebPage._connection.queryAll('select age, count(*) from user group by age')
 
+def by_user_condition(condition):
+    queries = []
+    res = list(User.select(condition))
+    for i, user in enumerate(res):
+        queries.append(WebPage.select(WebPage.q.user == user.number))
+    return queries
+
 def users_by_age(min_age, max_age):
     if (min_age >= max_age):
         raise ValueError("min_age must be lower than max_age")
-    queries = []
-    old = list(User.select(AND(User.q.age >= min_age, User.q.age < max_age)))
-    for i, user in enumerate(old):
-        queries.append(WebPage.select(WebPage.q.user == user.number))
-    return queries
+    return by_user_condition(AND(User.q.age >= min_age, User.q.age < max_age))
 
 def apply_filters_by_age(min_age, max_age, filters, annotator):
     filters = list(filters)
@@ -84,3 +87,26 @@ def by_age_loop(ages):
                 custom_field='possessum')
         annotator.set_sentences(pd.sentences)
         annotator.write(name)
+
+def read_possessive():
+    d = '/home/tal/corpus/annotations/PronounPossessives/'
+    dic = {}
+    dic['child_pd'] = read_sentence_file(d + '14to15_PDPron/sentences.json')
+    dic['child_gen'] = read_sentence_file(d + '14to15_GenPron/sentences.json')
+    dic['young_pd'] = read_sentence_file(d + '16to17_PDPron/sentences.json')
+    dic['young_gen'] = read_sentence_file(d + '16to17_GenPron/sentences.json')
+    dic['mid_pd'] = read_sentence_file(d + '22to24_PDPron/sentences.json')
+    dic['mid_gen'] = read_sentence_file(d + '22to24_GenPron/sentences.json')
+    dic['old_pd'] = read_sentence_file(d + '30to45_PDPron/sentences.json')
+    dic['old_gen'] = read_sentence_file(d + '30to45_GenPron/sentences.json')
+    dic['real_old_pd'] = read_sentence_file(d + '45to70_PDPron/sentences.json')
+    dic['real_old_gen'] = read_sentence_file(d + '45to70_GenPron/sentences.json')
+    globals().update(dic)
+    return dic
+
+# dict((key, float(len([x for x in value if x.metadata['possessum'] in body_parts])) / len(value)) for key, value in pos.items())
+
+# c = [CountLemmas.from_file(x, field='word') for x in glob.glob('/home/tal/Dropbox/University/Einat/unknown_words/*.txt')]
+# q = BGUQueries(by_user_condition(User.q.number < 5000), limit=1000000, distribute=True)
+# c[0].process_many(q, c[1:])
+# for x in c: x.save_csv()

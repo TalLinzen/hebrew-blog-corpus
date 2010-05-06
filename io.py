@@ -140,8 +140,22 @@ def BGUQuery(sqlobject_query):
             sentence.metadata['age'] = User.byNumber(result.user).age
             yield sentence
 
-def BGUQueries(sqlobject_queries):
-    for index, query in enumerate(sqlobject_queries):
-        print '%d out of %d' % (index, len(sqlobject_queries))
-        for sentence in BGUQuery(query):
+def BGUQueries(sqlobject_queries, limit=None, distribute=False):
+    '''
+    limit: If set, stop after this number of sentence
+    distribute: If True, take an equal number of sentences from
+        each query (if available). Only meaningful in conjunction with limit
+    '''
+    global_sentence_index = 0
+    n_queries = len(sqlobject_queries)
+    if limit and distribute:
+        query_limit = limit / n_queries
+    for query_index, query in enumerate(sqlobject_queries):
+        print '%d out of %d' % (query_index, n_queries)
+        for sentence_index, sentence in enumerate(BGUQuery(query)):
             yield sentence
+            if limit and global_sentence_index == limit - 1:
+                return
+            if limit and distribute and sentence_index == query_limit - 1:
+                break
+            global_sentence_index += 1
