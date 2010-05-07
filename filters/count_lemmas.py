@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import codecs, os
+import xlwt
 from filter import Filter
 
 class CountLemmas(Filter):
@@ -10,6 +11,7 @@ class CountLemmas(Filter):
         Lemmas should be utf8 encoded
         '''
         Filter.__init__(self)
+        self.lemmas = lemmas
         self.counters = dict((lemma, 0) for lemma in lemmas)
         self.word_limit = word_limit
         self.predicate = predicate
@@ -37,14 +39,16 @@ class CountLemmas(Filter):
 
         return False # Never save sentences
 
-    def save_csv(self, filename=None):
+    def save_xls(self, filename=None):
         if filename is None and hasattr(self, 'filename'):
             base = os.path.splitext(self.filename)[0]
-            filename = base + '.csv'
-        handle = codecs.open(filename, 'w', encoding='utf8')
-        handle.write('\n'.join('%s,%d' % (value, count) for value, count in \
-                sorted(self.counters.items())))
-        handle.close()
+            filename = base + '.xls'
+        wb = xlwt.Workbook()
+        sheet = wb.add_sheet('Count')
+        for row, lemma in enumerate(self.lemmas):
+            sheet.write(row, 0, lemma)
+            sheet.write(row, 1, self.counters[lemma])
+        wb.save(filename)
 
     def display(self):
         for value, count in self.counters.items():
