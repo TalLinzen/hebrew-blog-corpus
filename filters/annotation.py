@@ -58,10 +58,10 @@ class Annotation(object):
     center_alignment.direction = Alignment.DIRECTION_RL
     center.alignment = center_alignment
 
-    def __init__(self, description, sentences=None, custom_field=None):
+    def __init__(self, description, sentences=None, custom_fields=None):
         self.workbooks = {}
         self.description = description
-        self.custom_field = custom_field
+        self.custom_fields = custom_fields
         if sentences:
             self.set_sentences(sentences)
 
@@ -98,12 +98,18 @@ class Annotation(object):
         sheet.write(row, 3, before, self.left)
         sheet.write(row, 4, all, self.left)
         sheet.write(row, 5, sentence.id, self.left)
-        custom_data = ''
-        if isinstance(self.custom_field, basestring):
-            custom_data = sentence.metadata[self.custom_field]
-        elif callable(self.custom_field):
-            custom_data = self.custom_field(sentence)
-        sheet.write(row, 6, custom_data, self.right)
+
+        col_index = 6
+        for field in self.custom_fields:
+            custom_data = ''
+            if isinstance(field, basestring):
+                custom_data = sentence.metadata[field]
+            elif callable(field):
+                custom_data = field(sentence)
+            else:
+                raise TypeError("Can't handle custom field %s" % field)
+            sheet.write(row, col_index, custom_data, self.right)
+            col_index += 1
 
     def escape_name(self, name):
         safe_name = re.sub(r'[/\?\*]', '_', name)
