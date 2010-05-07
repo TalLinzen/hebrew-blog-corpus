@@ -176,9 +176,12 @@ governed_preps = {
 # 5 occurences for a specific frame (preposition after dative)
 pd_verbs = csv_read_dict('possessive_dative_verbs.csv')
 
-for key in governed_preps.keys():
-    if isinstance(governed_preps[key], basestring):
-        governed_preps[key] = (governed_preps[key],)
+def tuplify_values(d):
+    for key in d.keys():
+        if isinstance(d[key], basestring):
+            d[key] = (d[key],)
+
+tuplify_values(pd_verbs)
 
 subcat_cond1 = [
     u'התגעגע',
