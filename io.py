@@ -143,7 +143,9 @@ def BGUQuery(sqlobject_query):
         for sentence in BGUString(result.analyzed):
             sentence.metadata['webpage_id'] = result.id
             sentence.metadata['user'] = result.user
-            sentence.metadata['age'] = User.byNumber(result.user).age
+            user = User.byNumber(result.user)
+            sentence.metadata['age'] = user.age
+            sentence.metadata['sex'] = user.sex
             yield sentence
 
 def BGUQueries(sqlobject_queries, limit=None, distribute=False):
