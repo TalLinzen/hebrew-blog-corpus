@@ -42,8 +42,8 @@ false_datives = [
 def is_dative(word, filter_infinitives=True):
     dative = word.pos == 'noun' and \
                 word.lemma not in false_datives and \
-                word.prefix in (lamed, vav_lamed) \
-                or word.lemma == lamed \
+                word.prefix in (u'ל', u'ול') \
+                or word.lemma == u'ל' \
                 or word.base in lamed_fused_forms
             # Last test is in theory redundant but works around
             # disambiguation errors
@@ -171,7 +171,8 @@ class PossessiveDativeWithPronoun(GenericFilter):
         Once(not_equal('chunk', 'I-NP'))
     ]
 
-class PossessiveDativeWithPronoun(GenericFilter):
+class PossessiveDativeOneWord(GenericFilter):
+    'One word dative-marked argument'
     private = ['in_chunk']
     predicates = [
         Once(one_of('lemma', set(pd_verbs.keys()),
