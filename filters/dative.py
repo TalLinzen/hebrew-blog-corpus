@@ -159,42 +159,56 @@ def set_in_chunk(word, state):
         store_possessum(word, state)
     return True
 
-class PossessiveDativeWithPronoun(GenericFilter):
+class PossessiveDative(GenericFilter):
     private = ['in_chunk']
-    predicates = [
-        Once(one_of('lemma', set(pd_verbs.keys()),
-            export_field='verb')),
-        Once(one_of('word', lamed_fused_forms), highlight=True),
+    before_dative = [Once(one_of('lemma', set(pd_verbs.keys()),
+            export_field='verb'))]
+    after_dative = [
         AnyNumberOf(equal('chunk', 'I-NP')),
         And(is_the_expected_preposition, set_in_chunk),
         Conditional(store_possessum, lambda s: not s['in_chunk']),
-        Once(not_equal('chunk', 'I-NP'))
+        ZeroWidth(not_equal('chunk', 'I-NP'))
     ]
+    def build_predicate_list(self):
+        return self.before_dative + [self.dative] + self.after_dative
 
-class PossessiveDativeOneWord(GenericFilter):
-    'One word dative-marked argument'
-    private = ['in_chunk']
-    predicates = [
-        Once(one_of('lemma', set(pd_verbs.keys()),
-            export_field='verb')),
-        Once(is_dative_wrapped, highlight=True),
-        AnyNumberOf(equal('chunk', 'I-NP')),
-        And(is_the_expected_preposition, set_in_chunk),
-        Conditional(store_possessum, lambda s: not s['in_chunk']),
-        Once(not_equal('chunk', 'I-NP'))
-    ]
+class PossessiveDativeWithPronoun(PossessiveDative):
+    dative = Once(one_of('word', lamed_fused_forms), highlight=True)
 
-class GenitiveWithPronoun(GenericFilter):
+class PossessiveDativeOneWord(PossessiveDative):
+    dative = Once(is_dative_wrapped, highlight=True)
+
+
+class Genitive(GenericFilter):
     private = ['in_chunk']
-    predicates = [
+    before_genitive = [
         Once(one_of('lemma', set(pd_verbs.keys()),
             export_field='verb'), highlight=True),
         ZeroWidth(set_in_chunk),
         Once(is_the_expected_preposition),
-        Conditional(store_possessum, lambda s: not s['in_chunk']),
-        
+        Conditional(store_possessum, lambda s: not s['in_chunk'])
+    ]
+    def build_predicate_list(self):
+        return self.before_genitive + self.genitive
+
+def is_shel(word, state):
+    if word.word == u'של': 
+        state['argument'] = 'lexical'
+        return True
+    elif word.word in shel_fused_forms:
+        state['argument'] = 'pronoun'
+        return True
+
+class GenitiveWithPronoun(Genitive):
+    genitive = [
         And(equal('pos', 'shel-preposition'),
             one_of('word', shel_fused_forms))
     ]
 
-
+class GenitiveOneWord(Genitive):
+    genitive = [
+        Once(is_shel),
+        Conditional(equal('chunk', 'I-NP'), 
+            lambda s: s['argument'] == 'lexical'),
+        ZeroWidth(not_equal('chunk', 'I-NP'))
+    ]
