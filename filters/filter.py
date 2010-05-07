@@ -1,26 +1,17 @@
-#try:
-#    import guppy
-#except ImportError:
-#    guppy = None
-
-import hashlib
+import hashlib, copy
 
 class Filter(object):
 
-    def __init__(self, guppy_interval=None):
+    def __init__(self):
         self.sentences = []
         self.sentence_hashes = set()
         self.running = True
 
-#        self.guppy_interval = guppy_interval
-#        if guppy is not None:
-#            self.hpy = guppy.hpy()
-
     def process_and_record(self, sentence):
         result = self.process(sentence)
         if result:
-            unique = ''.join(sentence.words).encode('utf8') + \
-                    sentence.metadata.get('user', '')
+            # This is strong: remove all duplicate sentences
+            unique = ''.join(sentence.words).encode('utf8')
             digest = hashlib.sha1(unique).digest()
             if digest not in self.sentence_hashes:
                 self.sentence_hashes.add(digest)
@@ -31,9 +22,11 @@ class Filter(object):
         for index, sentence in enumerate(sentences):
             some_still_running = False
             for filter in filters:
+                # Same words, but possibly eventually different metadata
+                sentence_copy = sentence.clone()
                 if filter.running:
                     some_still_running = True
-                filter.process_and_record(sentence)
-            sentence.reduce_memory_footprint()
+                filter.process_and_record(sentence_copy)
+                sentence_copy.reduce_memory_footprint()
             if not some_still_running:
                 break

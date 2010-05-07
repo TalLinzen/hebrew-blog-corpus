@@ -45,13 +45,19 @@ class BGUWord(object):
 class BGUSentence(object):
 
     def __init__(self, rich_words=None):
+        self.metadata = {}
         if rich_words is not None:
             self.rich_words = rich_words
             self.words = [word.word for word in self.rich_words]
-            self.metadata = {}
 
     def reduce_memory_footprint(self):
         del self.rich_words
+
+    def clone(self):
+        cloned = self.__class__(rich_words=None)
+        cloned.rich_words = self.rich_words
+        cloned.words = self.words
+        return cloned
 
     def pprint(self, reverse=False):
         if reverse:
