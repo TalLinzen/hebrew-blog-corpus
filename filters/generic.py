@@ -5,7 +5,8 @@ import unittest
 
 builtin_predicates = ['is_obstructor', 'anything']
 
-predicate_factories = ['equal', 'not_equal', 'one_of', 'not_one_of', 'store']
+predicate_factories = ['equal', 'not_equal', 'one_of', 'not_one_of', 'store',
+        'remove']
 
 predicate_modifiers = ['Once', 'And', 'Or', 'ZeroWidth', 'Conditional',
         'Repeated', 'AnyNumberOf', 'Optional']
@@ -80,6 +81,11 @@ def store(field, as_variable):
         state[as_variable] = getattr(word, field)
     return predicate
 
+def remove(variable):
+    def predicate(word, state):
+        del state[variable]
+    return predicate
+
 ######################
 # Predicate Modifiers
 ######################
@@ -146,6 +152,9 @@ class ZeroWidth(PredicateModifier):
     def parse(self, index, sentence, state):
         matched = self.predicate(sentence.rich_words[index], state)
         return matched, index
+
+    def is_zero_length(self):
+        return True
 
 class Conditional(Once):
     '''
@@ -228,6 +237,7 @@ class GenericFilter(Filter):
 
     def __init__(self):
         Filter.__init__(self)
+        self.predicates = self.predicates or self.build_predicate_list()
         if len(self.predicates) == 0:
             raise NotImplementedError("Must provide at least one predicate")
         self.normalize_predicates()
