@@ -11,7 +11,7 @@ from filters.subcat import SubcategorizationFrames
 from filters.subcat_annotation import SubcatAnnotation
 from filters.count_lemmas import CountLemmas
 from filters.annotation import *
-from filters.generic import *
+from filters.dative import *
 from tools.process_annotation import AnnotationProcessor
 from verbs_for_subcat import verbs_for_subcat
 from data.word_lists import *
@@ -76,14 +76,14 @@ def by_age_loop(ages):
 
         name = '%dto%d_GenPron' % (min_age, max_age)
         annotator = ByAttributeAnnotation(name, 'verb', 
-                single_workbook=True, single_workbook_name=name,
+                mode='single_workbook', single_workbook_name=name,
                 custom_field='possessum')
         annotator.set_sentences(g.sentences)
         annotator.write(name)
 
         name = '%dto%d_PDPron' % (min_age, max_age)
         annotator = ByAttributeAnnotation(name, 'verb', 
-                single_workbook=True, single_workbook_name=name,
+                mode='single_workbook', single_workbook_name=name,
                 custom_field='possessum')
         annotator.set_sentences(pd.sentences)
         annotator.write(name)
@@ -103,6 +103,12 @@ def read_possessive():
     dic['real_old_gen'] = read_sentence_file(d + '45to70_GenPron/sentences.json')
     globals().update(dic)
     return dic
+
+def get_sentence(filter, sentence):
+    bq = BGUQuery(WebPage.get(sentence.metadata['webpage_id']))
+    filter.process(list(bq)[sentence.metadata['index']])
+    return filter
+
 
 # dict((key, float(len([x for x in value if x.metadata['possessum'] in body_parts])) / len(value)) for key, value in pos.items())
 
