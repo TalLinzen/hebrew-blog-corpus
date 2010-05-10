@@ -5,5 +5,6 @@
 *.wpr
 *.swp
 *.swo
+*.swn
 version.py
 .ropeproject
