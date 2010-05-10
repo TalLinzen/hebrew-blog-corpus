@@ -57,6 +57,7 @@ class BGUSentence(object):
         cloned = self.__class__(rich_words=None)
         cloned.rich_words = self.rich_words
         cloned.words = self.words
+        cloned.metadata.update(self.metadata)
         return cloned
 
     def pprint(self, reverse=False):
@@ -150,7 +151,7 @@ def BGUQuery(sqlobject_query):
 
 def BGUQueries(sqlobject_queries, limit=None, distribute=False):
     '''
-    limit: If set, stop after this number of sentence
+    limit: If set, stop after this number of sentences
     distribute: If True, take an equal number of sentences from
         each query (if available). Only meaningful in conjunction with limit
     '''
