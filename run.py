@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from pdb import pm
-import codecs, json
+import codecs, json, glob, os, csv
 from sqlobject import *
 
 from io import BGUFile, BGUDir, BGUQuery, BGUQueries
 from db import setup_connection, WebPage, User
+import conf
+
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
 from filters.subcat import SubcategorizationFrames
@@ -13,6 +15,7 @@ from filters.count_lemmas import CountLemmas
 from filters.annotation import *
 from filters.dative import *
 from tools.process_annotation import AnnotationProcessor
+import tools.transliterated_hebrew
 from verbs_for_subcat import verbs_for_subcat
 from data.word_lists import *
 
@@ -44,7 +47,8 @@ def pufc(count, n=1000, rev=True):
         print '%10s %d' % (key, value)
 
 def age_histogram():
-    return WebPage._connection.queryAll('select age, count(*) from user group by age')
+    query = 'select age, count(*) from user group by age'
+    return WebPage._connection.queryAll(query)
 
 def by_user_condition(condition):
     queries = []
@@ -67,7 +71,9 @@ def apply_filters_by_age(min_age, max_age, filters, annotator):
         annotator.write(dirname)
     return filters
 
-def by_age_loop(ages):
+ages = [(13, 17), (18, 19), (24, 28), (30, 38), (40, 70)]
+
+def possessive_with_pronouns(ages):
     for min_age, max_age in ages:
         g = GenitiveWithPronoun()
         pd = PossessiveDativeWithPronoun()
@@ -77,38 +83,73 @@ def by_age_loop(ages):
         name = '%dto%d_GenPron' % (min_age, max_age)
         annotator = ByAttributeAnnotation(name, 'verb', 
                 mode='single_workbook', single_workbook_name=name,
-                custom_field='possessum')
+                custom_fields=('possessum',))
         annotator.set_sentences(g.sentences)
         annotator.write(name)
 
         name = '%dto%d_PDPron' % (min_age, max_age)
         annotator = ByAttributeAnnotation(name, 'verb', 
                 mode='single_workbook', single_workbook_name=name,
-                custom_field='possessum')
+                custom_fields=('possessum',))
         annotator.set_sentences(pd.sentences)
         annotator.write(name)
 
-def read_possessive():
-    d = '/home/tal/corpus/annotations/PronounPossessives/'
-    dic = {}
-    dic['child_pd'] = read_sentence_file(d + '14to15_PDPron/sentences.json')
-    dic['child_gen'] = read_sentence_file(d + '14to15_GenPron/sentences.json')
-    dic['young_pd'] = read_sentence_file(d + '16to17_PDPron/sentences.json')
-    dic['young_gen'] = read_sentence_file(d + '16to17_GenPron/sentences.json')
-    dic['mid_pd'] = read_sentence_file(d + '22to24_PDPron/sentences.json')
-    dic['mid_gen'] = read_sentence_file(d + '22to24_GenPron/sentences.json')
-    dic['old_pd'] = read_sentence_file(d + '30to45_PDPron/sentences.json')
-    dic['old_gen'] = read_sentence_file(d + '30to45_GenPron/sentences.json')
-    dic['real_old_pd'] = read_sentence_file(d + '45to70_PDPron/sentences.json')
-    dic['real_old_gen'] = read_sentence_file(d + '45to70_GenPron/sentences.json')
-    globals().update(dic)
-    return dic
+def possessive_one_word(ages):
+    for min_age, max_age in ages:
+        g = GenitiveOneWord()
+        pd = PossessiveDativeOneWord()
+        input = BGUQueries(users_by_age(min_age, max_age))
+        pd.process_many(input, [g])
+
+        name = '%dto%d_GenOneWord' % (min_age, max_age)
+        annotator = ByAttributeAnnotation(name, 'verb', 
+                mode='single_workbook', single_workbook_name=name,
+                custom_fields=('possessum', 'argument'))
+        annotator.set_sentences(g.sentences)
+        annotator.write(name)
+
+        name = '%dto%d_PDOneWord' % (min_age, max_age)
+        annotator = ByAttributeAnnotation(name, 'verb', 
+                mode='single_workbook', single_workbook_name=name,
+                custom_fields=('possessum', 'argument'))
+        annotator.set_sentences(pd.sentences)
+        annotator.write(name)
+
+prongendir = os.path.join(conf.annotation_dir, 'PronounGen')
+pronpddir = os.path.join(conf.annotation_dir, 'PronounPD')
+
+def read_dir(d):
+    l = []
+    for subdir in sorted(glob.glob(os.path.join(d, '*'))):
+        if os.path.isdir(subdir):
+            s = read_sentence_file(os.path.join(subdir, 'sentences.json'))
+            l.append(s)
+    return l
 
 def get_sentence(filter, sentence):
     bq = BGUQuery(WebPage.get(sentence.metadata['webpage_id']))
     filter.process(list(bq)[sentence.metadata['index']])
     return filter
 
+def r_data_frame(pd_sentences, gen_sentences):
+    #def q(dirname):
+    #    return reduce(lambda x, y: x + y, 
+    #            [[x for x in y if x.metadata['possessum'] in body_parts] \
+    #                for y in read_dir(dirname)])
+
+    #pronpd = q(pronpddir)
+    #prongen = q(prongendir)
+
+    for sentence in gen_sentences:
+        sentence.metadata['type'] = 'gen'
+    for sentence in pd_sentences:
+        sentence.metadata['type'] = 'pd'
+    writer = csv.writer(open(os.path.join(conf.data_dir, 'r_data.csv'), 'w'))
+    writer.writerow(['type', 'age', 'sex', 'verb'])
+    for sentence in gen_sentences + pd_sentences:
+        writer.writerow([sentence.metadata['type'], sentence.metadata['age'],
+                sentence.metadata['sex'], 
+                sentence.metadata['verb'].encode('transliterated-hebrew')])
 
 # dict((key, float(len([x for x in value if x.metadata['possessum'] in body_parts])) / len(value)) for key, value in pos.items())
 
