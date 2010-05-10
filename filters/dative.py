@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from generic import *
+from parsing_filter import *
 from .tools.hspell import infinitives
 from .data.word_lists import pd_verbs, possession_black_list
 
@@ -12,7 +12,7 @@ lamed_quasi_pronouns = lamed_reflexive_fused_forms + \
 shel_fused_forms = set([u'של' + form for form in clitic_forms_special])
 
 
-class Bishvil(GenericFilter):
+class Bishvil(ParsingFilter):
 
     bishvil_fused = [u'בשביל' + c for c in clitic_forms]
 
@@ -65,13 +65,13 @@ def is_dative_wrapped(word, state):
         return True
 
 
-class YeshDative(GenericFilter):
+class YeshDative(ParsingFilter):
     predicates = [
         one_of('word', (u'יש', u'אין'), export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
     ]
 
-class NatanDative(GenericFilter):
+class NatanDative(ParsingFilter):
     # Annotate by 'argument'
     predicates = [
             equal('lemma', u'נתן'),
@@ -101,7 +101,7 @@ def is_preposition(word, state):
         return True
 
 
-class AnyDativeWithPronoun(GenericFilter):
+class AnyDativeWithPronoun(ParsingFilter):
     predicates = [
         And(not_one_of('lemma', possession_black_list),
             equal('pos', 'verb'), on_match=store('lemma', 'verb'),
@@ -110,7 +110,7 @@ class AnyDativeWithPronoun(GenericFilter):
         Once(is_preposition)
     ]
 
-class ReflexiveDative(GenericFilter):
+class ReflexiveDative(ParsingFilter):
     predicates = [
         And(not_one_of('lemma', possession_black_list),
             equal('pos', 'verb'),
@@ -160,7 +160,7 @@ def set_in_chunk(word, state):
         store_possessum(word, state)
     return True
 
-class PossessiveDative(GenericFilter):
+class PossessiveDative(ParsingFilter):
     private = ['in_chunk']
     before_dative = [Once(one_of('lemma', set(pd_verbs.keys()),
             export_field='verb'))]
@@ -180,7 +180,7 @@ class PossessiveDativeOneWord(PossessiveDative):
     dative = Once(is_dative_wrapped, highlight=True)
 
 
-class Genitive(GenericFilter):
+class Genitive(ParsingFilter):
     private = ['in_chunk']
     before_genitive = [
         Once(one_of('lemma', set(pd_verbs.keys()),

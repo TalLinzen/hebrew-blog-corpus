@@ -12,7 +12,7 @@ predicate_modifiers = ['Once', 'And', 'Or', 'ZeroWidth', 'Conditional',
         'Repeated', 'AnyNumberOf', 'Optional']
 
 __all__ = builtin_predicates + predicate_factories + predicate_modifiers + \
-        ['GenericFilter']
+        ['ParsingFilter']
 
 clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
@@ -225,18 +225,18 @@ class Optional(Repeated):
 
 
 #################
-# Generic Filter
+# Parsing Filter
 #################
 
-class GenericFilter(Filter):
+class ParsingFilter(Filter):
 
     predicates = []
     internal = ['next_predicate']
     private = []
     counted_features = []
 
-    def __init__(self):
-        Filter.__init__(self)
+    def __init__(self, **options):
+        Filter.__init__(self, **options)
         self.predicates = self.predicates or self.build_predicate_list()
         if len(self.predicates) == 0:
             raise NotImplementedError("Must provide at least one predicate")
@@ -351,7 +351,7 @@ class Tests(unittest.TestCase):
     sentence = DS(list('abbbccd'))
 
     def t(self, preds):
-        class TestFilter(GenericFilter):
+        class TestFilter(ParsingFilter):
             predicates = preds
         self.assertTrue(TestFilter().process(self.sentence))
 
@@ -371,7 +371,7 @@ class Tests(unittest.TestCase):
         self.t([Repeated(eq('b')), eq('b')])
 
     def test_greedy(self):
-        class TestFilter(GenericFilter):
+        class TestFilter(ParsingFilter):
             predicates = [Repeated(eq('b'), greedy=True), eq('b')]
         self.assertFalse(TestFilter().process(self.sentence))
 
@@ -385,7 +385,7 @@ class Tests(unittest.TestCase):
         self.t([eq('c'), eq('d')])
 
     def test_conditional(self):
-        class TestFilter(GenericFilter):
+        class TestFilter(ParsingFilter):
             def set_state(x, s):
                 s['b_after_2b'] = x == 'b'
                 return True

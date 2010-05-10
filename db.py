@@ -1,5 +1,4 @@
 import sys, traceback
-from tools.transliterator import Transliterator
 
 sqlobjectegg = '/Library/Frameworks/Python.framework/Versions/2.5/lib/python2.5/site-packages/SQLObject-0.10.2-py2.5.egg' 
 if sqlobjectegg not in sys.path: 

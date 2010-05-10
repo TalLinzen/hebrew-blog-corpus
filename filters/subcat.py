@@ -81,8 +81,8 @@ class SubcategorizationFrames(Filter):
     # and atkn - we exclude them from the list so they will always be
     # analyzed as accusative
 
-    def __init__(self, interesting_verbs, max_tokens=2000):
-        Filter.__init__(self)
+    def __init__(self, interesting_verbs, max_tokens=2000, **options):
+        Filter.__init__(self, **options)
         self.dict = {}
         self.counters = {}
         self.max_tokens = max_tokens

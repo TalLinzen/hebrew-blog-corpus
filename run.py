@@ -16,7 +16,6 @@ from filters.annotation import *
 from filters.dative import *
 from tools.process_annotation import AnnotationProcessor
 import tools.transliterated_hebrew
-from verbs_for_subcat import verbs_for_subcat
 from data.word_lists import *
 
 cleaner = IsrablogCleaner()

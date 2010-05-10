@@ -9,7 +9,6 @@ from gzip import GzipFile
 from cStringIO import StringIO
 import re, time, sys, urllib, urllib2
 
-from transliterator import Transliterator
 from httptools import FirefoxRequest
 
 
@@ -21,7 +20,8 @@ class GoogleParser(object):
     def __init__(self):
 
         self.links_re = re.compile(r'(?<=<a href=")[^>]*?(?=" class=l)')
-        self.exact_n_results_re = re.compile(r'<b>\d+</b> - <b>\d+</b>.*?<b>(\d+)</b>')
+        n_res = r'<b>\d+</b> - <b>\d+</b>.*?<b>(\d+)</b>'
+        self.exact_n_results_re = re.compile(n_res)
         
     def run(self, query, just_count=True):
 
