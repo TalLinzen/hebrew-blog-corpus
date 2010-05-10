@@ -7,7 +7,8 @@ clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
 lamed_fused_forms = [u'ל' + form for form in clitic_forms_special]
 lamed_reflexive_fused_forms = [u'לעצמ' + form for form in clitic_forms]
-lamed_quasi_pronouns = [u'לאנשים', u'לדברים', u'לזה']
+lamed_quasi_pronouns = lamed_reflexive_fused_forms + \
+        [u'לאנשים', u'לדברים', u'לזה']
 shel_fused_forms = set([u'של' + form for form in clitic_forms_special])
 
 
@@ -164,7 +165,7 @@ class PossessiveDative(GenericFilter):
     before_dative = [Once(one_of('lemma', set(pd_verbs.keys()),
             export_field='verb'))]
     after_dative = [
-        AnyNumberOf(equal('chunk', 'I-NP')),
+        #AnyNumberOf(equal('chunk', 'I-NP')),      # Not for one word
         And(is_the_expected_preposition, set_in_chunk),
         Conditional(store_possessum, lambda s: not s['in_chunk']),
         ZeroWidth(not_equal('chunk', 'I-NP'))
