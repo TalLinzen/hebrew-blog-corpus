@@ -144,11 +144,14 @@ def r_data_frame(pd_sentences, gen_sentences):
     for sentence in pd_sentences:
         sentence.metadata['type'] = 'pd'
     writer = csv.writer(open(os.path.join(conf.data_dir, 'r_data.csv'), 'w'))
-    writer.writerow(['type', 'age', 'sex', 'verb'])
+    writer.writerow(['type', 'user', 'age', 'sex', 'verb', 'bp'])
     for sentence in gen_sentences + pd_sentences:
-        writer.writerow([sentence.metadata['type'], sentence.metadata['age'],
+        writer.writerow([sentence.metadata['type'], 
+                sentence.metadata['user'],
+                sentence.metadata['age'],
                 sentence.metadata['sex'], 
-                sentence.metadata['verb'].encode('transliterated-hebrew')])
+                sentence.metadata['verb'].encode('transliterated-hebrew'),
+                str(sentence.metadata['possessum'] in body_parts)[0]])
 
 # dict((key, float(len([x for x in value if x.metadata['possessum'] in body_parts])) / len(value)) for key, value in pos.items())
 
