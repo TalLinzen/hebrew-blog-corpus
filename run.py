@@ -158,4 +158,4 @@ def r_data_frame(pd_sentences, gen_sentences):
 # c = [CountLemmas.from_file(x, field='word') for x in glob.glob('/home/tal/Dropbox/University/Einat/unknown_words/*.txt')]
 # q = BGUQueries(by_user_condition(User.q.number < 5000), limit=1000000, distribute=True)
 # c[0].process_many(q, c[1:])
-# for x in c: x.save_csv()
+# for x in c: x.save_xls()
