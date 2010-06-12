@@ -59,13 +59,16 @@ def by_user_condition(condition):
 def users_by_age(min_age, max_age):
     if (min_age >= max_age):
         raise ValueError("min_age must be lower than max_age")
-    return by_user_condition(AND(User.q.age >= min_age, User.q.age < max_age))
+    return BGUQueries(by_user_condition(
+        AND(User.q.age >= min_age, User.q.age < max_age)))
 
-def apply_filters_by_age(min_age, max_age, filters, annotator):
-    filters = list(filters)
+def apply_filters_by_age(min_age, max_age, filters, annotator, name=None):
+    if type(filters) != list:
+        filters = [filters]
     filters[0].process_many(users_by_age(min_age, max_age), filters[1:])
     for filter in filters:
-        dirname = '%s_%dto%d' % (filter.annotation_prefix, min_age, max_age)
+        dirname = '%dto%d_%s' % (min_age, max_age,
+                filter.__class__.__name__ if name is None else name)
         annotator.set_sentences(filter.sentences)
         annotator.write(dirname)
     return filters
@@ -76,7 +79,7 @@ def possessive_with_pronouns(ages):
     for min_age, max_age in ages:
         g = GenitiveWithPronoun()
         pd = PossessiveDativeWithPronoun()
-        input = BGUQueries(users_by_age(min_age, max_age))
+        input = users_by_age(min_age, max_age)
         pd.process_many(input, [g])
 
         name = '%dto%d_GenPron' % (min_age, max_age)
@@ -97,7 +100,7 @@ def possessive_one_word(ages):
     for min_age, max_age in ages:
         g = GenitiveOneWord()
         pd = PossessiveDativeOneWord()
-        input = BGUQueries(users_by_age(min_age, max_age))
+        input = users_by_age(min_age, max_age)
         pd.process_many(input, [g])
 
         name = '%dto%d_GenOneWord' % (min_age, max_age)
