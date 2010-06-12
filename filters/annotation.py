@@ -2,6 +2,7 @@ import os, json, re
 from datetime import datetime
 from pyExcelerator import XFStyle, Alignment, UnicodeUtils, Workbook, parse_xls
 from .io import BGUSentence
+from .conf import annotation_dir
 
 UnicodeUtils.DEFAULT_ENCODING = 'utf8'
 
@@ -75,7 +76,7 @@ class Annotation(object):
                 sentence.annotation = ''
 
     def safe_mkdir(self, dirname):
-        dir = os.path.join(os.path.expanduser('~/corpus/annotations'), dirname)
+        dir = os.path.join(os.path.expanduser(annotation_dir), dirname)
         try:
             os.mkdir(dir)
         except OSError:
@@ -100,16 +101,17 @@ class Annotation(object):
         sheet.write(row, 5, sentence.id, self.left)
 
         col_index = 6
-        for field in self.custom_fields:
-            custom_data = ''
-            if isinstance(field, basestring):
-                custom_data = sentence.metadata[field]
-            elif callable(field):
-                custom_data = field(sentence)
-            else:
-                raise TypeError("Can't handle custom field %s" % field)
-            sheet.write(row, col_index, custom_data, self.right)
-            col_index += 1
+        if self.custom_fields is not None:
+            for field in self.custom_fields:
+                custom_data = ''
+                if isinstance(field, basestring):
+                    custom_data = sentence.metadata[field]
+                elif callable(field):
+                    custom_data = field(sentence)
+                else:
+                    raise TypeError("Can't handle custom field %s" % field)
+                sheet.write(row, col_index, custom_data, self.right)
+                col_index += 1
 
     def escape_name(self, name):
         safe_name = re.sub(r'[/\?\*]', '_', name)
@@ -186,17 +188,48 @@ def mix_attributes(attributes, sentences, limit):
 class ByAttributeAnnotation(Annotation):
 
     def __init__(self, description, attributes, inner_attributes=None,
-            mode='split_notebooks', single_workbook_name=None,
-            single_sheet=False, min_tokens=2,
-            max_tokens=3000, **options):
+            mode='split_workbooks', single_workbook_name=None,
+            min_tokens=2, max_tokens=3000, **options):
         '''
-        single_workbook: if True, all attribute values will be on the same
-            workbook, as sheets; otherwise create separate files for each value
-        single_workbook_name: name to give single workbook, if applicable
-        min_tokens: if attribute value has less than this number of occurences
-            don't create a sheet for it
-        max_tokens: stop writing sentences to sheet after this amount of
-            tokens of this value have been written
+        Classify sentences based on some of their attributes, and write
+        them to XLS files.
+
+        sentences:
+            list of sentences (same as Filter.sentences). [Inherited
+            from Annotation base class]
+
+        description:
+            a textual description of the annotation. Will appear in a
+            'meta' sheet of each workbook. Mandatory.
+
+        attributes:
+            a single attribute, or a tuple of attributes, by which
+            the sentences will be classified into annotation files (the
+            exact behavior depends on the mode)
+            
+        inner_attributes:
+            only applicable for the split workbooks mode. Combinations of
+            the inner attributes will form the names of sheets within
+            each workbook
+
+        mode:
+            'single_workbook': one workbook with different sheet for each
+                attribute combination
+            'split_workbooks': separate workbook for each attribute combination
+            'single_sheet': single workbook with a single sheet for all
+                attribute combinations (but combination will appear in a
+                dedicated spreadsheet column)
+
+        single_workbook_name: 
+            name of single workbook, if applicable
+
+        min_tokens:
+            if an attribute combination has less than this number of occurences
+            discard this combination (do not write it to annotation files)
+
+        max_tokens:
+            stop writing sentences with any given attribute combination after
+            this amount of tokens of this combination have been written
         '''
 
         Annotation.__init__(self, description, **options)
