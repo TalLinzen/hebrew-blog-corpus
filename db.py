@@ -1,10 +1,4 @@
 import sys, traceback
-
-sqlobjectegg = '/Library/Frameworks/Python.framework/Versions/2.5/lib/python2.5/site-packages/SQLObject-0.10.2-py2.5.egg' 
-if sqlobjectegg not in sys.path: 
-    sys.path.append(sqlobjectegg) 
-    sys.path.append('/Library/Frameworks/Python.framework/Versions/2.5/lib/python2.5/site-packages/FormEncode-1.0.1-py2.5.egg') 
-    sys.path.append('/Library/Frameworks/Python.framework/Versions/2.5/lib/python2.5/site-packages/MySQL_python-1.2.2-py2.5-macosx-10.3-fat.egg') 
 from sqlobject import * 
 
 class WebPage(SQLObject):

@@ -21,7 +21,7 @@ class CountLemmas(Filter):
     @classmethod
     def from_file(cls, filename, **args):
         handle = codecs.open(filename, encoding='utf8')
-        lemmas = [x.strip() for x in handle.readlines()]
+        lemmas = [x.replace('"', '').strip() for x in handle.readlines()]
         obj = cls(lemmas, **args)
         obj.filename = filename
         return obj

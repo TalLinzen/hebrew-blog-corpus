@@ -1,6 +1,6 @@
 from sqlobject.main import SQLObject
 from StringIO import StringIO
-import codecs, os, json
+import codecs, os
 from datetime import datetime
 from db import User
 

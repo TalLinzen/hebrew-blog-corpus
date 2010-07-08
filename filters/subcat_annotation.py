@@ -1,5 +1,5 @@
 import os
-from pyExcelerator import Workbook
+from xlwt import Workbook
 from annotation import Annotation
 
 class SubcatAnnotation(Annotation):

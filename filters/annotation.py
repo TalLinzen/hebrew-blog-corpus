@@ -1,6 +1,10 @@
-import os, json, re
+import os, re
+try:
+    import json
+except ImportError:
+    json = None
 from datetime import datetime
-from pyExcelerator import XFStyle, Alignment, UnicodeUtils, Workbook, parse_xls
+from xlwt import XFStyle, Alignment, UnicodeUtils, Workbook
 from .io import BGUSentence
 from .conf import annotation_dir
 
@@ -15,6 +19,8 @@ def read_sentence_file(filename):
     return sentences
 
 def write_sentence_file(sentences, filename):
+    if json is None:
+        return
     f = open(filename, 'w')
     json.dump([obj.__dict__ for obj in sentences], f)
 
@@ -24,6 +30,7 @@ def update_annotation_directory(dirname):
     '''
     sentence_file_name = os.path.join(dirname, 'sentences.json')
     sentences = read_sentence_file(sentence_file_name)
+    from xlwt import parse_xls  # FIXME
 
     for file in os.listdir(dirname):
         if file.endswith('.xls'):
@@ -192,7 +199,8 @@ class ByAttributeAnnotation(Annotation):
             min_tokens=2, max_tokens=3000, **options):
         '''
         Classify sentences based on some of their attributes, and write
-        them to XLS files.
+        them to XLS files. Lists of sentences will be taken from different
+        users, distributed as evenly as possible (cf. MixUsers).
 
         sentences:
             list of sentences (same as Filter.sentences). [Inherited
@@ -283,6 +291,7 @@ class ByAttributeAnnotation(Annotation):
                 assert 0, 'Invalid mode %s' % self.mode
 
 class MixUsers(Annotation):
+
     def __init__(self, limit=10000, **options):
         Annotation.__init__(self, **options)
         self.limit = limit

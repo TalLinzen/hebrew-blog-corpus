@@ -1,4 +1,4 @@
-from pyExcelerator import XFStyle, Alignment
+from xlwt import XFStyle, Alignment
 
 left = XFStyle()
 left_alignment = Alignment()

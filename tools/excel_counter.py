@@ -1,4 +1,4 @@
-from pyExcelerator import parse_xls, Workbook
+from xlwt import parse_xls, Workbook
 
 class ExcelCounter(object):
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from pdb import pm
-import codecs, json, glob, os, csv
+import codecs, glob, os, csv
 from sqlobject import *
 
 from io import BGUFile, BGUDir, BGUQuery, BGUQueries
@@ -9,6 +9,9 @@ import conf
 
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
+cleaner = IsrablogCleaner()
+harvester = IsrablogHarvester()
+
 from filters.subcat import SubcategorizationFrames
 from filters.subcat_annotation import SubcatAnnotation
 from filters.count_lemmas import CountLemmas
@@ -17,9 +20,6 @@ from filters.dative import *
 from tools.process_annotation import AnnotationProcessor
 import tools.transliterated_hebrew
 from data.word_lists import *
-
-cleaner = IsrablogCleaner()
-harvester = IsrablogHarvester()
 
 subcat_annotation_destinations = {'AL': 'PP-על',
         'EL': 'PP-אל',
@@ -158,7 +158,7 @@ def r_data_frame(pd_sentences, gen_sentences):
 
 # dict((key, float(len([x for x in value if x.metadata['possessum'] in body_parts])) / len(value)) for key, value in pos.items())
 
-# c = [CountLemmas.from_file(x, field='word') for x in glob.glob('/home/tal/Dropbox/University/Einat/unknown_words/*.txt')]
+# c = [CountLemmas.from_file(x, field='word') for x in glob.glob('/Users/tal/Dropbox/University/Einat/unknown_words/*.txt')]
 # q = BGUQueries(by_user_condition(User.q.number < 5000), limit=1000000, distribute=True)
 # c[0].process_many(q, c[1:])
 # for x in c: x.save_xls()

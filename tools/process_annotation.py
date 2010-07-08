@@ -1,5 +1,5 @@
 import glob, os
-from pyExcelerator import parse_xls, Workbook, UnicodeUtils
+from xlwt import Workbook, UnicodeUtils
 from excel_alignments import left, center, right
 UnicodeUtils.DEFAULT_ENCODING = 'utf8'
 
@@ -55,6 +55,7 @@ class AnnotationProcessor(object):
         if len(files) == 0:
             raise ValueError('No xls files in specified path')
 
+        from xlwt import parse_xls # FIXME
         for filename in files:
             parsed = parse_xls(filename, 'utf8')
             transformed = self.transform_workbook(parsed)
