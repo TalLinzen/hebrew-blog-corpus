@@ -9,6 +9,7 @@ class WebPage(SQLObject):
     accessed = DateTimeCol()
     site = StringCol()
     age = IntCol()
+    birthyear = IntCol()
     user = StringCol()
     sex = StringCol()
     analyzed = StringCol(sqlType='LONGTEXT')
@@ -16,6 +17,7 @@ class WebPage(SQLObject):
 class User(SQLObject):
 
     age = IntCol()
+    birthyear = IntCol()
     number = StringCol(length=15, alternateID=True)
     sex = StringCol(length=10)
     chars = IntCol()

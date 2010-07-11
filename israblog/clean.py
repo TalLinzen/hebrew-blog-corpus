@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import re, os, types, sys
 import lxml.html, lxml.etree
 from .db import WebPage, User
@@ -22,6 +23,11 @@ class HTMLToText(HTMLParser):
 
 
 class IsrablogCleaner(object):
+    '''
+    Example:
+    cleaner = IsrablogCleaner()
+    cleaner.run_many(cleaner.clean, cleaner.fill_user)
+    '''
 
     suppress = True
 
@@ -30,6 +36,7 @@ class IsrablogCleaner(object):
         self.age_regexp = re.compile(r'<b>(\xe1[\xef\xfa]):</b>\xa0(\d+)') # b[nt] (ben/bat)
         self.sex_regexp = re.compile(r'<b>\xee\xe9\xef:</b>\xa0(.*?)<br>') # min
         self.url_user_regexp = re.compile(r'blog=(\d+)')
+        self.url_year_regexp = re.compile(r'year=(\d+)')
 
     def clean(self, object):
         s = lxml.html.fromstring(object.raw.decode('cp1255', 'ignore'))
@@ -54,9 +61,12 @@ class IsrablogCleaner(object):
                 encode('utf8')
 
     def fill_age_and_sex(self, object):
+        year_match = self.url_year_regexp.search(object.url)
         age_match = self.age_regexp.search(object.raw)
         if age_match:
             object.age = int(age_match.group(2))
+            if year_match:
+                object.birthyear = int(year_match.group(1)) - object.age
             object.sex = 'male' if age_match.group(1) == '\xe1\xef' else \
                     'female'
         else:
