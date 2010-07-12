@@ -27,7 +27,8 @@ class IndexCorpus(object):
         self.writer.close()
 
     def index(self, directory):
-        for filename in sorted(os.listdir(directory), key=int):
+        files = [x for x in os.listdir(directory) if x.isdigit()]
+        for filename in sorted(files, key=int):
             path = os.path.join(directory, filename)
             if not filename.isdigit():
                 continue
@@ -104,11 +105,13 @@ class BlogCorpusFilter(PythonTokenFilter):
         self.posAttr = self.addAttribute(PositionIncrementAttribute.class_)
         self.n_features = 2
         self.feature_index = self.n_features
-        self.features = [''] * self.n_features
 
     def incrementToken(self):
         if self.feature_index < self.n_features:
+            if self.feature_index == 1:
+                self.posAttr.setPositionIncrement(0)
             self.termAttr.setTermBuffer(self.features[self.feature_index])
+            print self.posAttr.positionIncrement, repr(self.termAttr.term())
             self.feature_index += 1
             return True
         else:
@@ -116,7 +119,6 @@ class BlogCorpusFilter(PythonTokenFilter):
             if not self.inStream.incrementToken():
                 return False
 
-            self.posAttr.setPositionIncrement(0)
             self.getFeatures(self.termAttr.term())
             return True
 
@@ -127,7 +129,7 @@ class BlogCorpusFilter(PythonTokenFilter):
             # Lucene CharTokenizer silly limitation, should find a workaround
             self.__class__.too_long_count += 1
             print 'Too long count: %d' % self.__class__.too_long_count
-            self.features ['dummy1212'] * self.n_features
+            self.features = ['dummy1212'] * self.n_features
         else:
             try:
                 word, prefix, base, suffix, lemma, pos, rest = arg.split('@', 6)
@@ -136,6 +138,7 @@ class BlogCorpusFilter(PythonTokenFilter):
                 self.features = ['dummy3434'] * self.n_features
             else:
                 self.features = ['w%s' % word, 'l%s' % lemma]
+                print self.features
 
 
 class BlogCorpusAnalyzer(PythonAnalyzer):
@@ -158,11 +161,10 @@ def search(d=index_dir):
 
 def test():
     initVM()
-    print ',', lucene.VERSION
     start = datetime.now()
     try:
-        dir = '/Users/tal/corpus/analyzed/4'
-        #dir = '/Users/tal/corpus/analyzed'
+        #dir = '/Users/tal/corpus/analyzed/4'
+        dir = '/Users/tal/corpus/analyzed'
         #dir = '/Users/tal/Dropbox/Hebrew-Blog-Corpus/experiments/t'
         analyzer = BlogCorpusAnalyzer()
         idx = IndexCorpus(index_dir, analyzer)
