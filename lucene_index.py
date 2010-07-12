@@ -1,49 +1,38 @@
 # -*- coding: utf-8 -*-
 
-import sys, os, lucene, threading, time, codecs
+import sys, os,  threading, time, codecs, lucene
+from lucene import \
+    Document, Field, TermAttribute, TermAttribute, PositionIncrementAttribute, \
+    WhitespaceTokenizer, SimpleFSDirectory, IndexSearcher, StandardAnalyzer, \
+    Version, File, QueryParser, initVM, PythonTokenFilter, PythonAnalyzer, \
+    IndexWriter
 from datetime import datetime
+from db import WebPage, User
 
-index_dir = '/Users/tal/corpus/lucene_index'
-
-class Ticker(object):
-
-    def __init__(self):
-        self.tick = True
-
-    def run(self):
-        while self.tick:
-            sys.stdout.write('.')
-            sys.stdout.flush()
-            time.sleep(1.0)
+index_dir = '/Users/tal/corpus/index_4_to_10'
 
 class IndexCorpus(object):
 
     def __init__(self, index_dir, analyzer):
-
         if not os.path.exists(index_dir):
             os.mkdir(index_dir)
 
-        store = lucene.SimpleFSDirectory(lucene.File(index_dir))
-        self.writer = lucene.IndexWriter(store, analyzer, True, 
-                lucene.IndexWriter.MaxFieldLength.LIMITED)
+        store = SimpleFSDirectory(File(index_dir))
+        self.writer = IndexWriter(store, analyzer, True, 
+                IndexWriter.MaxFieldLength.LIMITED)
         self.writer.setMaxFieldLength(1048576)
 
     def finalize(self):
-        ticker = Ticker()
-        print 'optimizing index',
-        threading.Thread(target=ticker.run).start()
         self.writer.optimize()
         self.writer.close()
-        ticker.tick = False
-        print 'done'
 
     def index(self, directory):
         for filename in sorted(os.listdir(directory), key=int):
-            path = os.path.join(root, filename)
+            path = os.path.join(directory, filename)
             if not filename.isdigit():
                 continue
             if os.path.isdir(path):
-                self.index_dir(directory)
+                self.index(path)
             else:
                 if int(filename) % 100 == 0:
                     print datetime.now().ctime(), filename
@@ -54,11 +43,23 @@ class IndexCorpus(object):
 
     def index_file(self, path):
         handle = codecs.open(path, encoding='utf8')
+        filename = os.path.basename(path)
+        user_number = WebPage.get(filename).user
+        user_record = list(User.select(User.q.number == user_number))[0]
+        gender = user_record.sex if user_record.sex is not None else "Unknown"
+        birthyear = (str(user_record.birthyear) 
+                if user_record.birthyear is not None else '0')
+
         s = handle.read()
 
         pos = s.find(u'\n\n') + 2    # Skip first block: declaration
         nextpos = 0
         sentence_index = 0
+
+        YES = Field.Store.YES
+        NO = Field.Store.NO
+        NOT_ANALYZED = Field.Index.NOT_ANALYZED
+        ANALYZED = Field.Index.ANALYZED
 
         while nextpos != len(s):
             nextpos = s.find(u'\n \n', pos)
@@ -69,28 +70,23 @@ class IndexCorpus(object):
             text = text.replace(u' ', u'@').strip()
             pos = nextpos + 2
 
-            doc = lucene.Document()
-            doc.add(lucene.Field("sentence_index", 
-                str(sentence_index),
-                lucene.Field.Store.YES,
-                lucene.Field.Index.NOT_ANALYZED))
-            doc.add(lucene.Field("filename", 
-                filename, 
-                lucene.Field.Store.YES, 
-                lucene.Field.Index.NOT_ANALYZED))
-            doc.add(lucene.Field("contents",
-                text, 
-                lucene.Field.Store.NO,
-                lucene.Field.Index.ANALYZED))
+            doc = Document()
+            doc.add(Field("sentence_index", str(sentence_index), YES,
+                NOT_ANALYZED))
+            doc.add(Field("user", user_number, YES, NOT_ANALYZED))
+            doc.add(Field("gender", gender, YES, NOT_ANALYZED))
+            doc.add(Field("birthyear", birthyear, YES, NOT_ANALYZED))
+            doc.add(Field("filename", filename, YES, NOT_ANALYZED))
+            doc.add(Field("contents", text, NO, ANALYZED))
             self.writer.addDocument(doc)
 
-class BlogCorpusFilter(lucene.PythonTokenFilter):
+class BlogCorpusFilter(PythonTokenFilter):
     too_long_count = 0
 
     def __init__(self, inStream):
         super(BlogCorpusFilter, self).__init__(inStream)
         self.featureStack = []
-        self.termAttr = self.addAttribute(lucene.TermAttribute.class_)
+        self.termAttr = self.addAttribute(TermAttribute.class_)
         self.save = inStream.cloneAttributes()
         self.inStream = inStream
 
@@ -136,48 +132,43 @@ class BlogCorpusFilter(lucene.PythonTokenFilter):
 
         for feature in features:
             self.save.restoreState(current)
-            attr = self.save.addAttribute(lucene.TermAttribute.class_)
+            attr = self.save.addAttribute(TermAttribute.class_)
             attr.setTermBuffer(feature)
-            attr = self.save.addAttribute(lucene.PositionIncrementAttribute.class_)
+            attr = self.save.addAttribute(PositionIncrementAttribute.class_)
             attr.setPositionIncrement(0)
             self.featureStack.append(self.save.captureState())
 
-class BlogCorpusAnalyzer(lucene.PythonAnalyzer):
+class BlogCorpusAnalyzer(PythonAnalyzer):
     def tokenStream(self, fieldName, reader):
-        tokenStream = lucene.WhitespaceTokenizer(reader)
+        tokenStream = WhitespaceTokenizer(reader)
         return BlogCorpusFilter(tokenStream)
 
-class NewlineTokenizer(lucene.PythonCharTokenizer):
-    'Not used because slow'
-    def isTokenChar(self, c):
-        return c != u'\n'
-
 def search():
-    lucene.initVM()
+    initVM()
     command = u'wלאכול'
     #command = u'lלא'
-    directory = lucene.SimpleFSDirectory(lucene.File(index_dir))
-    searcher = lucene.IndexSearcher(directory, True)
-    analyzer = lucene.StandardAnalyzer(lucene.Version.LUCENE_CURRENT)
-    query = lucene.QueryParser(lucene.Version.LUCENE_CURRENT, "contents",
+    directory = SimpleFSDirectory(File(index_dir))
+    searcher = IndexSearcher(directory, True)
+    analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
+    query = QueryParser(Version.LUCENE_CURRENT, "contents",
                         analyzer).parse(command)
     res = searcher.search(query, 50)
     print 'Total hits:', res.totalHits
     return [searcher.doc(doc.doc) for doc in res.scoreDocs]
 
 def test():
-    lucene.initVM()
-    print 'lucene', lucene.VERSION
+    initVM()
+    print ',', lucene.VERSION
     start = datetime.now()
     try:
-        #dir = '/Users/tal/corpus/analyzed/5'
+        #dir = '/Users/tal/corpus/analyzed/4'
         dir = '/Users/tal/corpus/analyzed'
         #dir = '/Users/tal/Dropbox/Hebrew-Blog-Corpus/experiments/t'
         analyzer = BlogCorpusAnalyzer()
         idx = IndexCorpus(index_dir, analyzer)
-        idx.indexDocs(dir)
-        #for i in range(5, 6):
-        #    idx.indexDocs(dir % i)
+        idx.index(dir)
+        for i in range(4, 10):
+            idx.index_dir(dir % i)
         idx.finalize()
         end = datetime.now()
         print end - start
