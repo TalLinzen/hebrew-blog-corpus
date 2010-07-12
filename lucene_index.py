@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# profile.run('execfile("lucene_index.py"); execfile("run.py"); setup_connection(""); test()')
 import sys, os,  threading, time, codecs, lucene
 from lucene import \
     Document, Field, TermAttribute, TermAttribute, PositionIncrementAttribute, \
@@ -9,7 +9,7 @@ from lucene import \
 from datetime import datetime
 from db import WebPage, User
 
-index_dir = '/Users/tal/corpus/index_4_to_10'
+index_dir = '/Users/tal/corpus/lucene_index'
 
 class IndexCorpus(object):
 
@@ -61,23 +61,36 @@ class IndexCorpus(object):
         NOT_ANALYZED = Field.Index.NOT_ANALYZED
         ANALYZED = Field.Index.ANALYZED
 
+        doc = Document()
+        sentence_index_field = Field("sentence_index", str(sentence_index), YES,
+            NOT_ANALYZED)
+        user_field = Field("user", '', YES, NOT_ANALYZED)
+        gender_field = Field("gender", '', YES, NOT_ANALYZED)
+        birthyear_field = Field("birthyear", '', YES, NOT_ANALYZED)
+        filename_field = Field("filename", '', YES, NOT_ANALYZED)
+        contents_field = Field("contents", '', NO, ANALYZED)
+        doc.add(sentence_index_field)
+        doc.add(user_field)
+        doc.add(gender_field)
+        doc.add(birthyear_field)
+        doc.add(filename_field)
+        doc.add(contents_field)
+
         while nextpos != len(s):
             nextpos = s.find(u'\n \n', pos)
             if nextpos == -1:
                 nextpos = len(s)
             sentence_index = sentence_index + 1
             text = s[pos:nextpos]
-            text = text.replace(u' ', u'@').strip()
+            text = text.strip().replace(u' ', u'@')
             pos = nextpos + 2
 
-            doc = Document()
-            doc.add(Field("sentence_index", str(sentence_index), YES,
-                NOT_ANALYZED))
-            doc.add(Field("user", user_number, YES, NOT_ANALYZED))
-            doc.add(Field("gender", gender, YES, NOT_ANALYZED))
-            doc.add(Field("birthyear", birthyear, YES, NOT_ANALYZED))
-            doc.add(Field("filename", filename, YES, NOT_ANALYZED))
-            doc.add(Field("contents", text, NO, ANALYZED))
+            sentence_index_field.setValue(str(sentence_index))
+            user_field.setValue(user_number)
+            gender_field.setValue(gender)
+            birthyear_field.setValue(birthyear)
+            filename_field.setValue(filename)
+            contents_field.setValue(text)
             self.writer.addDocument(doc)
 
 class BlogCorpusFilter(PythonTokenFilter):
@@ -85,22 +98,27 @@ class BlogCorpusFilter(PythonTokenFilter):
 
     def __init__(self, inStream):
         super(BlogCorpusFilter, self).__init__(inStream)
+        self.inStream = inStream
         self.featureStack = []
         self.termAttr = self.addAttribute(TermAttribute.class_)
-        self.save = inStream.cloneAttributes()
-        self.inStream = inStream
+        self.posAttr = self.addAttribute(PositionIncrementAttribute.class_)
+        self.n_features = 2
+        self.feature_index = self.n_features
+        self.features = [''] * self.n_features
 
     def incrementToken(self):
-        if len(self.featureStack) > 0:
-            syn = self.featureStack.pop()
-            self.restoreState(syn)
+        if self.feature_index < self.n_features:
+            self.termAttr.setTermBuffer(self.features[self.feature_index])
+            self.feature_index += 1
             return True
+        else:
+            self.feature_index = 0
+            if not self.inStream.incrementToken():
+                return False
 
-        if not self.inStream.incrementToken():
-            return False
-
-        self.addAliasesToStack()
-        return True
+            self.posAttr.setPositionIncrement(0)
+            self.getFeatures(self.termAttr.term())
+            return True
 
     declaration = 'word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk'.split()
 
@@ -109,45 +127,27 @@ class BlogCorpusFilter(PythonTokenFilter):
             # Lucene CharTokenizer silly limitation, should find a workaround
             self.__class__.too_long_count += 1
             print 'Too long count: %d' % self.__class__.too_long_count
-            return ['dummy1212']
+            self.features ['dummy1212'] * self.n_features
         else:
-            if arg[0] == '@':
-                arg = arg[1:]
             try:
                 word, prefix, base, suffix, lemma, pos, rest = arg.split('@', 6)
             except ValueError:
                 print 'Problem:', repr(arg)
-                return ['dummy343434']
+                self.features = ['dummy3434'] * self.n_features
             else:
-                ret = ['w%s' % word, 'l%s' % lemma]
-        #ret = ['%d|%s' % (i, x) for i, x in enumerate(arg.strip().split()) if i < 3]
-        return ret
+                self.features = ['w%s' % word, 'l%s' % lemma]
 
-    def addAliasesToStack(self):
-        features = self.getFeatures(self.termAttr.term())
-        if features is None:
-            return
-
-        current = self.captureState()
-
-        for feature in features:
-            self.save.restoreState(current)
-            attr = self.save.addAttribute(TermAttribute.class_)
-            attr.setTermBuffer(feature)
-            attr = self.save.addAttribute(PositionIncrementAttribute.class_)
-            attr.setPositionIncrement(0)
-            self.featureStack.append(self.save.captureState())
 
 class BlogCorpusAnalyzer(PythonAnalyzer):
     def tokenStream(self, fieldName, reader):
         tokenStream = WhitespaceTokenizer(reader)
         return BlogCorpusFilter(tokenStream)
 
-def search():
+def search(d=index_dir):
     initVM()
     command = u'wלאכול'
-    #command = u'lלא'
-    directory = SimpleFSDirectory(File(index_dir))
+    command = u'"lשלום lקורא"'
+    directory = SimpleFSDirectory(File(d))
     searcher = IndexSearcher(directory, True)
     analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
     query = QueryParser(Version.LUCENE_CURRENT, "contents",
@@ -161,14 +161,14 @@ def test():
     print ',', lucene.VERSION
     start = datetime.now()
     try:
-        #dir = '/Users/tal/corpus/analyzed/4'
-        dir = '/Users/tal/corpus/analyzed'
+        dir = '/Users/tal/corpus/analyzed/4'
+        #dir = '/Users/tal/corpus/analyzed'
         #dir = '/Users/tal/Dropbox/Hebrew-Blog-Corpus/experiments/t'
         analyzer = BlogCorpusAnalyzer()
         idx = IndexCorpus(index_dir, analyzer)
         idx.index(dir)
-        for i in range(4, 10):
-            idx.index_dir(dir % i)
+        #for i in range(4, 10):
+        #    idx.index_dir(dir % i)
         idx.finalize()
         end = datetime.now()
         print end - start
