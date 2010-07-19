@@ -6,9 +6,12 @@ from .data.word_lists import pd_verbs, possession_black_list
 clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
 lamed_fused_forms = [u'ל' + form for form in clitic_forms_special]
+lamed_fused_forms += [u'ו' + x for x in lamed_fused_forms]
 lamed_reflexive_fused_forms = [u'לעצמ' + form for form in clitic_forms]
+lamed_reflexive_fused_forms += [u'ו' + x for x in lamed_reflexive_fused_forms]
 lamed_quasi_pronouns = lamed_reflexive_fused_forms + \
         [u'לאנשים', u'לדברים', u'לזה']
+lamed_quasi_pronouns += [u'ו' + x for x in lamed_quasi_pronouns]
 shel_fused_forms = set([u'של' + form for form in clitic_forms_special])
 
 
@@ -69,6 +72,36 @@ class YeshDative(ParsingFilter):
     predicates = [
         one_of('word', (u'יש', u'אין'), export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
+    ]
+
+class Ditransitives(ParsingFilter):
+    predicates = [
+        one_of('lemma', (u'אפה', u'הכין', u'צייר', u'ארגן'), export_field='lemma'),
+        Once(is_dative_wrapped, highlight=True)
+    ]
+
+class GovernedDatives(ParsingFilter):
+    predicates = [
+        one_of('lemma', (u'שיקר', u'לעג', u'עזר', u'סלח', u'יעץ'), export_field='lemma'),
+        Once(is_dative_wrapped, highlight=True)
+    ]
+
+class EthicalDatives(ParsingFilter):
+    predicates = [
+        one_of('lemma', (u'קיטר', u'התבכיין', u'התיפיף', u'נרדם', u'ייעץ'), export_field='lemma'),
+        Once(is_dative_wrapped, highlight=True)
+    ]
+class DitransitivesPD(ParsingFilter):
+    predicates = [
+        one_of('lemma', (u'לקח', u'גנב'), export_field='lemma'),
+        Once(is_dative_wrapped, highlight=True)
+    ]
+
+class YeshAfterDative(ParsingFilter):
+    predicates = [
+        Once(is_dative_wrapped, highlight=True),
+        AnyNumberOf(equal('chunk', 'I-NP')),
+        one_of('word', (u'יש', u'אין'), export_field='lemma')
     ]
 
 class NatanDative(ParsingFilter):
