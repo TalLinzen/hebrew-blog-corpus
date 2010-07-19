@@ -10,6 +10,7 @@ import conf
 
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
 from israblog.harvest import IsrablogHarvester
+from israblog.user_table import *
 cleaner = IsrablogCleaner()
 harvester = IsrablogHarvester()
 

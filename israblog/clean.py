@@ -26,7 +26,7 @@ class IsrablogCleaner(object):
     '''
     Example:
     cleaner = IsrablogCleaner()
-    cleaner.run_many(cleaner.clean, cleaner.fill_user)
+    cleaner.run_on_many(cleaner.clean, cleaner.fill_user)
     '''
 
     suppress = True
@@ -120,26 +120,6 @@ class IsrablogCleaner(object):
                     except Exception, exc:
                         print '%d: major exc, giving up: %s' % \
                                 (object.id, str(exc)[:200])
-
-    def fill_user_table(self):
-        User.dropTable()
-        User.createTable()
-        users = User._connection.queryAll('select distinct user from web_page')
-        users = [x[0] for x in users]
-        for i, user in enumerate(users):
-            print i, user
-            ages = User._connection.queryAll(
-                    "select distinct age from web_page where user='%s'" % user)
-            potential_age = [y[0] for y in ages if y[0] != None]
-            age = potential_age[0] if len(potential_age) != 0 else None
-            sexes = User._connection.queryAll(
-                    "select distinct sex from web_page where user='%s'" % user)
-            potential_sex = [y[0] for y in sexes if y[0] != None]
-            sex = potential_sex[0] if len(potential_sex) != 0 else None
-            chars = User._connection.queryAll(
-                    "select sum(length(clean_text)) from web_page where user='%s'" % user)
-            chars = int(chars[0][0])
-            User(number=user, age=age, sex=sex, chars=chars)
 
     def count_tokens(self, object):
         if not hasattr(self, 'tokens'):
