@@ -10,7 +10,7 @@ from lucene import \
 from datetime import datetime
 from db import WebPage, User
 
-index_dir = '/Users/tal/corpus/lucene_index'
+index_dir = '/Users/tal/corpus/lucene_index_full'
 
 class IndexCorpus(object):
 
@@ -56,7 +56,8 @@ class IndexCorpus(object):
         if metadata:
             user_number = WebPage.get(filename).user
             user_record = list(User.select(User.q.number == user_number))[0]
-            gender = user_record.sex if user_record.sex is not None else "Unknown"
+            gender = (user_record.sex if user_record.sex is not None 
+                    else "Unknown")
             birthyear = (str(user_record.birthyear) 
                     if user_record.birthyear is not None else '0')
 
@@ -73,7 +74,7 @@ class IndexCorpus(object):
         gender_field = Field("gender", '', YES, NOT_ANALYZED)
         birthyear_field = Field("birthyear", '', YES, NOT_ANALYZED)
         filename_field = Field("filename", '', YES, NOT_ANALYZED)
-        contents_field = Field("contents", '', NO, ANALYZED)
+        contents_field = Field("contents", '', YES, ANALYZED)
         doc.add(sentence_index_field)
         if metadata:
             doc.add(user_field)
@@ -96,6 +97,7 @@ class IndexCorpus(object):
                 gender_field.setValue(gender)
                 birthyear_field.setValue(birthyear)
                 filename_field.setValue(filename)
+
             contents_field.setValue(text)
             self.writer.addDocument(doc)
             sentence_index = sentence_index + 1
@@ -129,8 +131,6 @@ class BlogCorpusFilter(PythonTokenFilter):
             self.feature_index = 1
             return True
 
-    declaration = 'word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk'.split()
-
     def getFeatures(self, arg):
         if len(arg) == 0:
             self.features = ['dummy0000', 'dummy0000']
@@ -158,20 +158,23 @@ class BlogCorpusAnalyzer(PythonAnalyzer):
 
 command1 = u'wלאכול'
 command2 = u'"lשלום lקורא"'
+command3 = u'wלא'
 
+initVM()
 def search(command=command1, d=index_dir):
-    initVM()
     directory = SimpleFSDirectory(File(d))
     searcher = IndexSearcher(directory, True)
     analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
     query = QueryParser(Version.LUCENE_CURRENT, "contents",
                         analyzer).parse(command)
-    res = searcher.search(query, 50)
+    res = searcher.search(query, 1000000)
     print 'Total hits:', res.totalHits
+    return searcher, res
     return [searcher.doc(doc.doc) for doc in res.scoreDocs]
 
-def build_index():
-    initVM()
+def build_index(where=None):
+    if where is not None:
+        index_dir = where
     start = datetime.now()
     try:
         dir = '/Users/tal/corpus/analyzed'

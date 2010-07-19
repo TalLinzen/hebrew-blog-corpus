@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
 from sqlobject.main import SQLObject
 from StringIO import StringIO
 import codecs, os
 from datetime import datetime
 from db import User
+
+declaration = 'word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk'.split()
 
 class BGUWord(object):
     
@@ -10,30 +13,23 @@ class BGUWord(object):
     string_fields = set(['word', 'base', 'lemma'])
 
     @classmethod
-    def from_tokenfeat(cls, declaration, line):
+    def from_tokenfeat(cls, declaration, line, sep=' '):
         word = cls()
-        splitted_line = line.split()
+        splitted_line = line.split(sep)
         if len(declaration) < len(splitted_line):
             raise ValueError('Declaration too short to parse line: %s' % \
                     repr(line))
         for feature, value in map(None, declaration, splitted_line):
-            if feature not in cls.string_fields:
-                value = cls.special_values.get(value, value)
+            if feature != 'word' and feature != 'base' and feature != 'lemma':
+                if value == '_':
+                    value = None
+                elif value == 't':
+                    value = True
+                elif value == 'f':
+                    value = False
             setattr(word, feature, value)
         # Hack because of bug:    
         word.tense, word.person = word.person, word.tense
-        return word
-
-    @classmethod
-    def from_bitmask(cls, word, analysis, lemma=None):
-        word = cls()
-        word.word = word
-        word.lemma = lemma
-        word.chunking = chunking
-        for feature, mask in Masks.masks.items():
-            relevant_bits = analysis & mask
-            value = Masks.reverse_lookups[feature].get(relevant_bits)
-            setattr(word, feature, value) 
         return word
 
     def __repr__(self):
@@ -72,13 +68,16 @@ class BGUSentence(object):
 
 class BGUAbstractFile(object):
 
-    def __init__(self, file, bitmask=False):
-        self.bitmask = bitmask
+    def __init__(self, file, sentence_indexes=None):
+        '''
+        If sentence_indexes is specified, yield only the sentences with this
+        index; e.g. [0, 1, 3] will yield the first, second and fourth sentences
+        of the file
+        '''
         self.file = file
         self.index = 0
-        if not bitmask:
-            self.declaration = self.file.readline().split()
-            self.file.readline()   # Empty line
+        self.declaration = self.file.readline().split()
+        self.file.readline()   # Empty line
 
     def __iter__(self):
         return self
@@ -90,24 +89,19 @@ class BGUAbstractFile(object):
             raise StopIteration
         line = line.strip()
         while line != '':
-            if self.bitmask:
-                word, analysis, lemma = line.split()
-                analysis = int(analysis)
-                words.append(BGUWord.from_bitmask(word, analysis, lemma))
-            else:
-                word = BGUWord.from_tokenfeat(self.declaration, line)
-                if word is not None:
-                    words.append(word)
+            word = BGUWord.from_tokenfeat(self.declaration, line)
+            if word is not None:
+                words.append(word)
             line = self.file.readline().strip()
         sentence = BGUSentence(words)
         sentence.metadata['index'] = self.index
         self.index += 1
         return sentence
 
-def BGUFile(filename):
+def BGUFile(filename, *args):
 
     handle = codecs.open(filename, encoding='utf8')
-    return BGUAbstractFile(handle)
+    return BGUAbstractFile(handle, *args)
 
 def BGUString(string):
 
@@ -168,3 +162,21 @@ def BGUQueries(sqlobject_queries, limit=None, distribute=False):
             if limit and distribute and sentence_index == query_limit - 1:
                 break
             global_sentence_index += 1
+
+def BGULuceneSearch(query_string):
+    '''
+    E.g. BGULuceneSearch('wאבוקדו'))
+    '''
+    from lucene_index import search
+    from conf import lucene_index_dir
+
+    searcher, results = search(command=query_string, d=lucene_index_dir)
+    for result in results.scoreDocs:
+        doc = searcher.doc(result.doc)
+        contents = doc.getField('contents').stringValue()
+        words = []
+        for line in contents.split('\n'):
+            word = BGUWord.from_tokenfeat(declaration, line)
+            if word is not None:
+                words.append(word)
+        yield BGUSentence(words)

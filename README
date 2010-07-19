@@ -19,7 +19,7 @@ PYTHON PACKAGE DEPENDENCIES
 SQLObject
 MySQL-python
 lxml
-whoosh
+(whoosh)
 
 pyLucene:
 In JCC dir:
@@ -28,3 +28,6 @@ sudo python setup.py install
 And then cd ..
 vi Makefile: make necessary changes
 make; make install
+
+
+To type Hebrew in ipython, LC_TYPE should be set to en_IE.UTF-8. Type raw strings rather than unicode strings (that is, don't use the u'...' prefix).

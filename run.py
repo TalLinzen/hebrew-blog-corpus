@@ -3,7 +3,8 @@ from pdb import pm
 import codecs, glob, os, csv
 from sqlobject import *
 
-from io import BGUFile, BGUDir, BGUQuery, BGUQueries
+from io import *
+from lucene_index import *
 from db import setup_connection, WebPage, User
 import conf
 
