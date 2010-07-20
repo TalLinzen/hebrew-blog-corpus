@@ -23,11 +23,18 @@ class User(SQLObject):
     chars = IntCol()
     number_index = DatabaseIndex('number')
 
+class Sentence(SQLObject):
+    
+    webpage_id = IntCol()
+    sentence_id = IntCol()
+    data = UnicodeCol(dbEncoding='utf8')   # dbEncoding does nothing? change this manually in DB
+    filename_and_sentence_id_index = DatabaseIndex('webpage_id', 'sentence_id')
+
 def setup_connection(password):
 
     connection_string = 'mysql://root:%s@localhost/corpus' % password
     connection = connectionForURI(connection_string)
-    #connection.dbEncoding = 'utf8'
+    connection.dbEncoding = 'utf8'
     sqlhub.processConnection = connection
 
 def insistent_db_op(func, *args, **kwargs):

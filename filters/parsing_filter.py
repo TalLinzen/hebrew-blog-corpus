@@ -275,15 +275,16 @@ class ParsingFilter(Filter):
         index = 0
         predicate_index = 0
         last_index_outside_match = 0
+        local_predicates = self.predicates
         while index != len(sentence.rich_words):
-            predicate = self.predicates[predicate_index]
+            predicate = local_predicates[predicate_index]
             old_index = index
 
-            if predicate_index + 1 == len(self.predicates):
+            if predicate_index + 1 == len(local_predicates):
                 state['next_predicate'] = None
             else:
                 state['next_predicate'] = \
-                        self.predicates[predicate_index + 1]
+                        local_predicates[predicate_index + 1]
 
             matched, index = predicate.parse(index, sentence, state)
 
@@ -302,7 +303,7 @@ class ParsingFilter(Filter):
                 predicate_index = 0
                 state = State()
 
-            if predicate_index == len(self.predicates):
+            if predicate_index == len(local_predicates):
                 break
 
         rest_are_zero = all(p.is_zero_length() for \

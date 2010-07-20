@@ -15,6 +15,8 @@ class BGUWord(object):
     @classmethod
     def from_tokenfeat(cls, declaration, line, sep=' '):
         word = cls()
+        if line[0] == sep:
+            line = line[1:]
         splitted_line = line.split(sep)
         if len(declaration) < len(splitted_line):
             raise ValueError('Declaration too short to parse line: %s' % \
@@ -30,6 +32,16 @@ class BGUWord(object):
             setattr(word, feature, value)
         # Hack because of bug:    
         word.tense, word.person = word.person, word.tense
+        return word
+
+# word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk
+    @classmethod
+    def from_tokenfeat_optimized(cls, line):
+        word = cls()
+        splitted_line = line.strip().split()
+        word.word, word.prefix, word.base, word.suffix, word.lemma, word.pos, word.postype, word.gender, word.number, word.construct, word.polarity, word.tense, word.person, word.def_, word.pconj, word.pint, word.pprep, word.psub, word.ptemp, word.prb, word.suftype, word.sufgen, word.sufname, word.sufperson, word.chunk = splitted_line
+        word.tense, word.person = word.person, word.tense
+        setattr(word, 'def_', word.def_)
         return word
 
     def __repr__(self):
@@ -167,16 +179,28 @@ def BGULuceneSearch(query_string):
     '''
     E.g. BGULuceneSearch('wאבוקדו'))
     '''
-    from lucene_index import search
+    from lucene_index import search, filename_cache, sentence_index_cache
     from conf import lucene_index_dir
+    from db import Sentence
+    from sqlobject import AND
 
-    searcher, results = search(command=query_string, d=lucene_index_dir)
-    for result in results.scoreDocs:
-        doc = searcher.doc(result.doc)
-        contents = doc.getField('contents').stringValue()
+    searcher, results = search(command=query_string)
+    for i, result in enumerate(results.scoreDocs):
+        if i % 1000 == 0:
+            print i
+        doc = result.doc
+        filename = filename_cache[doc]
+        sentence_id = sentence_index_cache[doc]
+        sentence = list(Sentence.selectBy(webpage_id=filename,
+                sentence_id=sentence_id))[0]
+        contents = sentence.data
         words = []
-        for line in contents.split('\n'):
-            word = BGUWord.from_tokenfeat(declaration, line)
+        for line in contents.strip().split('\n'):
+            try:
+                word = BGUWord.from_tokenfeat_optimized(line)
+            except ValueError:
+                print 'Parsing error:', line
+                continue
             if word is not None:
                 words.append(word)
         yield BGUSentence(words)

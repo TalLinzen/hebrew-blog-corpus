@@ -91,6 +91,29 @@ class EthicalDatives(ParsingFilter):
         one_of('lemma', (u'קיטר', u'התבכיין', u'התיפיף', u'נרדם', u'ייעץ'), export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
     ]
+
+def lucene_dative(verbs, extra_query='', after=True):
+    '''
+    lucene_dative([u'אפה', u'הכין', u'צייר', u'ארגן'], 'birthyear:[1970 TO 1980]')
+
+    after=True: dative should be after verb
+    '''
+    from .io import BGULuceneSearch
+    v = one_of('lemma', verbs, export_field='lemma')
+    d = Once(is_dative_wrapped, highlight=True)
+    class Filt(ParsingFilter):
+        predicates = [v, d] if after else [d, v]
+
+    filt = Filt()
+    query = '(%s)' % ' OR '.join(['l' + verb for verb in verbs])
+    if extra_query != '':
+        query += ' AND ' + extra_query
+    print query
+    luc = BGULuceneSearch(query)
+    filt.process_many(luc)
+    return filt
+       
+
 class DitransitivesPD(ParsingFilter):
     predicates = [
         one_of('lemma', (u'לקח', u'גנב'), export_field='lemma'),

@@ -6,7 +6,7 @@ from lucene import \
     Document, Field, TermAttribute, TermAttribute, PositionIncrementAttribute, \
     WhitespaceTokenizer, SimpleFSDirectory, IndexSearcher, StandardAnalyzer, \
     Version, File, QueryParser, initVM, PythonTokenFilter, PythonAnalyzer, \
-    IndexWriter
+    IndexReader, IndexWriter, FieldCache
 from datetime import datetime
 from db import WebPage, User
 
@@ -160,10 +160,16 @@ command1 = u'wלאכול'
 command2 = u'"lשלום lקורא"'
 command3 = u'wלא'
 
-initVM()
-def search(command=command1, d=index_dir):
-    directory = SimpleFSDirectory(File(d))
-    searcher = IndexSearcher(directory, True)
+initVM(maxheap='512m')
+reader = IndexReader.open(SimpleFSDirectory(File(index_dir)))
+print 'Building filename cache'
+filename_cache = FieldCache.DEFAULT.getInts(reader, 'filename')
+print 'Building sentence index cache'
+sentence_index_cache = FieldCache.DEFAULT.getInts(reader, 'sentence_index')
+print 'Done'
+
+def search(command=command1):
+    searcher = IndexSearcher(reader)
     analyzer = StandardAnalyzer(Version.LUCENE_CURRENT)
     query = QueryParser(Version.LUCENE_CURRENT, "contents",
                         analyzer).parse(command)

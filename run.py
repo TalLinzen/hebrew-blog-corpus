@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from pdb import pm
-import codecs, glob, os, csv
+import codecs, glob, os, csv, cProfile
 from sqlobject import *
 
 from io import *
 from lucene_index import *
-from db import setup_connection, WebPage, User
+from db import setup_connection, WebPage, User, Sentence
 import conf
 
 from israblog.clean import IsrablogCleaner, run_morph_analyzer
@@ -164,3 +164,8 @@ def r_data_frame(pd_sentences, gen_sentences):
 # q = BGUQueries(by_user_condition(User.q.number < 5000), limit=1000000, distribute=True)
 # c[0].process_many(q, c[1:])
 # for x in c: x.save_xls()
+
+def ld():
+    verbs = [u'ארגן', u'אפה', u'הכין', u'צייר', u'נתן', u'גנב', u'לקח']
+    verbs += [u'הרס', u'אכל', u'התסכל', u'הרים']
+    return lucene_dative(verbs[:1], 'birthyear:[1970 TO 1980]', after=False)
