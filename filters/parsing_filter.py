@@ -145,6 +145,14 @@ class Or(PredicateCombination):
             index += 1
         return matched, index
         
+class Not(PredicateModifier):
+    '''
+    Does is make sense to modify a state-changing predicate with Not?
+    '''
+
+    def parse(self, index, sentence, state):
+        return not self.predicate(sentence.rich_words[index], state)
+
 class ZeroWidth(PredicateModifier):
     '''
     Match word without moving to next word. Can be used to manipulate state.
