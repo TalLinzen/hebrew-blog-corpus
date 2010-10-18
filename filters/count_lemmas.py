@@ -16,6 +16,7 @@ class CountLemmas(Filter):
         self.word_limit = word_limit
         self.predicate = predicate
         self.total_word_count = 0
+        self.sentence_count = 0
         self.field = field
 
     @classmethod
@@ -27,6 +28,7 @@ class CountLemmas(Filter):
         return obj
 
     def process(self, sentence):
+        self.sentence_count += 1
         for word in sentence.rich_words:
             value = getattr(word, self.field)
             if value in self.counters and \
