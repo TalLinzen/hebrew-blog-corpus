@@ -4,6 +4,7 @@ from StringIO import StringIO
 import codecs, os
 from datetime import datetime
 from db import User
+from conf import analyzed_corpus_dir
 
 declaration = 'word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk'.split()
 
@@ -147,8 +148,11 @@ def BGUQuery(sqlobject_query):
         sqlobject_query = [sqlobject_query]
 
     for result in sqlobject_query:
-        for sentence in BGUString(result.analyzed):
-            sentence.metadata['webpage_id'] = result.id
+        webpage_id = result.id
+        filename = os.path.join(analyzed_corpus_dir, 
+                str(webpage_id / 1000), str(webpage_id))
+        for sentence in BGUFile(filename):
+            sentence.metadata['webpage_id'] = webpage_id
             sentence.metadata['user'] = result.user
             user = User.byNumber(result.user)
             sentence.metadata['age'] = user.age
@@ -185,21 +189,21 @@ def BGULuceneSearch(query_string):
     from sqlobject import AND
 
     searcher, results = search(command=query_string)
+    queryAll = Sentence._connection.queryAll
     for i, result in enumerate(results.scoreDocs):
         if i % 1000 == 0:
             print i
         doc = result.doc
         filename = filename_cache[doc]
         sentence_id = sentence_index_cache[doc]
-        sentence = list(Sentence.selectBy(webpage_id=filename,
-                sentence_id=sentence_id))[0]
-        contents = sentence.data
+        contents = queryAll('select data from sentence where webpage_id = %d and sentence_id = %d' %
+                (int(filename), int(sentence_id)))[0][0].decode('utf8')
         words = []
         for line in contents.strip().split('\n'):
             try:
                 word = BGUWord.from_tokenfeat_optimized(line)
-            except ValueError:
-                print 'Parsing error:', line
+            except ValueError, exc:
+                print 'Parsing error:' + repr(exc)
                 continue
             if word is not None:
                 words.append(word)
