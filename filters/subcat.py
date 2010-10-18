@@ -101,7 +101,7 @@ class SubcategorizationFrames(Filter):
         self.last_np_chunk = -5
         self.verb_found = False
 
-        for index, word in enumerate(sentence.words):
+        for index, word in enumerate(sentence.rich_words):
             self.index = index
             self.feed_word(word)
             if self.stop:
@@ -117,10 +117,9 @@ class SubcategorizationFrames(Filter):
     def post_process(self):
         if not hasattr(self.sentence, 'verb_index'):
             return
-        lemma = self.sentence.words[self.sentence.verb_index].lemma
+        lemma = self.sentence.rich_words[self.sentence.verb_index].lemma
         l = self.dict.setdefault(lemma, [])
         if len(l) < self.max_tokens:
-            self.reduce_sentence_memory_footprint(self.sentence)
             l.append(self.sentence)
 
     def feed_word(self, word):
@@ -285,7 +284,7 @@ class DativeFinder(SubcategorizationFrames):
         if not hasattr(self.sentence, 'verb_index') or \
                 not hasattr(self.sentence, 'argument_type'):
             return
-        verb_lemma = self.sentence.words[self.sentence.verb_index].lemma
+        verb_lemma = self.sentence.rich_words[self.sentence.verb_index].lemma
         if self.sentence.argument_type == u'PP-ל' and \
                 verb_lemma not in self.verbs_selecting_l:
             self.dict['all'].append(self.sentence)

@@ -4,7 +4,8 @@ from annotation import Annotation
 
 class SubcatAnnotation(Annotation):
 
-    def __init__(self, subcat_filter, max_sentences=None):
+    def __init__(self, description, subcat_filter, max_sentences=None):
+        Annotation.__init__(self, description)
         self.subcat_filter = subcat_filter
         self.max_sentences = max_sentences
 
@@ -31,7 +32,10 @@ class SubcatAnnotation(Annotation):
                 sheet.col(3).width = 0x3000
                 for index, (sentence, original_index) in \
                         enumerate(sentences_of_type):
-                    highlight = (sentence.verb_index, sentence.verb_index)
-                    self.write_splitted(sentence, highlight, sheet, index)
+                    sentence.metadata['highlight'] = \
+                            (sentence.verb_index, sentence.verb_index)
+                    sentence.annotation = ''
+                    sentence.id = ''
+                    self.write_splitted(sentence, sheet, index)
                 
             workbook.save(os.path.join(dir, lemma + '.xls'))
