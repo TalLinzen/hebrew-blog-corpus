@@ -48,10 +48,12 @@ class Filter(object):
         for index, sentence in enumerate(sentences):
             some_still_running = False
             for filt in filters:
-                # Same words, but possibly eventually different metadata
-                sentence_copy = sentence.clone()
                 if filt.running:
                     some_still_running = True
+                sentence_copy = (sentence.clone() if len(filters) > 1
+                        else sentence)
+                # Same words, but possibly eventually different metadata.
+                # Do that only if there's more than one filter
                 filt.process_and_record(sentence_copy)
                 sentence_copy.reduce_memory_footprint()
             if not some_still_running:
