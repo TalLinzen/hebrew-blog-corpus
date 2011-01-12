@@ -7,6 +7,7 @@ from lucene import \
     WhitespaceTokenizer, SimpleFSDirectory, IndexSearcher, StandardAnalyzer, \
     Version, File, QueryParser, initVM, PythonTokenFilter, PythonAnalyzer, \
     IndexReader, IndexWriter, FieldCache
+from common import BlogCorpusAnalyzer, BlogCorpusFilter
 from datetime import datetime
 from db import WebPage, User
 from static_lz import trained_short_string_compressor
@@ -119,65 +120,11 @@ class IndexCorpus(object):
             self.writer.addDocument(doc)
             sentence_index = sentence_index + 1
 
-class BlogCorpusFilter(PythonTokenFilter):
-    too_long_count = 0
-
-    def __init__(self, inStream):
-        super(BlogCorpusFilter, self).__init__(inStream)
-        self.inStream = inStream
-        self.featureStack = []
-        self.termAttr = self.addAttribute(TermAttribute.class_)
-        self.posAttr = self.addAttribute(PositionIncrementAttribute.class_)
-        self.n_features = 2
-        self.feature_index = self.n_features
-        self.token_count = 0
-
-    def incrementToken(self):
-        if self.feature_index < self.n_features:
-            if self.feature_index == 1:
-                self.posAttr.setPositionIncrement(0)
-            self.termAttr.setTermBuffer(self.features[self.feature_index])
-            self.feature_index += 1
-            return True
-        else:
-            self.token_count += 1
-            if not self.inStream.incrementToken():
-                return False
-            self.getFeatures(self.termAttr.term())
-            self.termAttr.setTermBuffer(self.features[0])
-            self.feature_index = 1
-            return True
-
-    def getFeatures(self, arg):
-        if len(arg) == 0:
-            self.features = ['dummy0000', 'dummy0000']
-        elif len(arg) == 255:
-            # Lucene CharTokenizer silly limitation, should find a workaround
-            self.__class__.too_long_count += 1
-            print 'Too long count: %d' % self.__class__.too_long_count
-            self.features = ['dummy1212'] * self.n_features
-        else:
-            if arg[0] == '@':
-                arg = arg[1:]
-            try:
-                word, prefix, base, suffix, lemma, pos, rest = arg.split('@', 6)
-            except ValueError:
-                print 'Problem:', repr(arg)
-                self.features = ['dummy3434'] * self.n_features
-            else:
-                self.features = ['w%s' % word, 'l%s' % lemma]
-
-
-class BlogCorpusAnalyzer(PythonAnalyzer):
-    def tokenStream(self, fieldName, reader):
-        tokenStream = WhitespaceTokenizer(reader)
-        return BlogCorpusFilter(tokenStream)
-
 command1 = u'wלאכול'
 command2 = u'"lשלום lקורא"'
 command3 = u'wלא'
 
-initVM(maxheap='512m')
+#initVM(maxheap='512m')
 #reader = IndexReader.open(SimpleFSDirectory(File(index_dir)))
 #print 'Building filename cache'
 #filename_cache = FieldCache.DEFAULT.getInts(reader, 'filename')
