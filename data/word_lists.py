@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import codecs, os
-from .conf import data_dir
+from hbc.conf import data_dir
 
 def csv_read(filename):
     # Very simple CSV! Don't put commas in fields

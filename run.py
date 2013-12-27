@@ -165,7 +165,10 @@ def r_data_frame(pd_sentences, gen_sentences):
 # c[0].process_many(q, c[1:])
 # for x in c: x.save_xls()
 
+# ByAttributeAnnotation("30 to 40 dative verbs, topicalized", 
+#   sentences=sentences, attributes=['lemma', 'argument'])
+
 def ld():
     verbs = [u'ארגן', u'אפה', u'הכין', u'צייר', u'נתן', u'גנב', u'לקח']
     verbs += [u'הרס', u'אכל', u'התסכל', u'הרים']
-    return lucene_dative(verbs[:1], 'birthyear:[1970 TO 1980]', after=False)
+    return lucene_dative_topicalized(verbs, 'birthyear:[1970 TO 1980]')

@@ -20,7 +20,8 @@ class GoogleParser(object):
     def __init__(self):
 
         self.links_re = re.compile(r'(?<=<a href=")[^>]*?(?=" class=l)')
-        n_res = r'<b>\d+</b> - <b>\d+</b>.*?<b>(\d+)</b>'
+        #n_res = r'<b>\d+</b> - <b>\d+</b>.*?<b>(\d+)</b>'
+        n_res = r'very similar to the (\d+) already displayed'
         self.exact_n_results_re = re.compile(n_res)
         
     def run(self, query, just_count=True):
@@ -70,10 +71,10 @@ class GoogleParser(object):
                 'q': query,
                 'start': page_number * self.results_per_page,
                 'sa': 'N',
-                'filter': 0
+#                'filter': 0
             }
 
-        req_str = 'http://www.google.co.il/search?' + urllib.urlencode(d)
+        req_str = 'http://www.google.com/search?' + urllib.urlencode(d)
         req = FirefoxRequest(req_str)
         return urllib2.urlopen(req)
 

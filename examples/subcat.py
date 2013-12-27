@@ -6,7 +6,7 @@ from io import BGUFile, BGUDir
 import os
 
 def subcat_example():
-    d = BGUDir('/Users/tal/corpus/analyzed/4')
+    d = BGUDir('/Users/tal/corpus/analyzed/5')
     sf = SubcategorizationFrames(einat_previous_experiment, max_tokens=1000)
     sf.process_many(d)
     sa = SubcatAnnotation('Whole corpus for Einats revision', sf)

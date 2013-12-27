@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
-from sqlobject.main import SQLObject
+try:
+    from sqlobject.main import SQLObject
+    from db import User
+except ImportError:
+    pass
+
 from StringIO import StringIO
 import codecs, os
 from datetime import datetime
-from db import User
 from conf import analyzed_corpus_dir
 
 declaration = 'word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk'.split()
@@ -127,7 +131,9 @@ def BGUString(string):
 
 def BGUDir(directory):
 
-    for filename in sorted(os.listdir(directory), key=int):
+    files = sorted((x for x in os.listdir(directory) if x.isdigit()), key=int)
+    for filename in files:
+
         full_filename = os.path.join(directory, filename)
 
         generator = None

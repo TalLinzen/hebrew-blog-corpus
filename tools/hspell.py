@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os, codecs
-from .conf import hspell_dir
+from hbc.conf import hspell_dir
 
 lamed = u'ל'
 

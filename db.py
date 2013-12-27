@@ -12,7 +12,6 @@ class WebPage(SQLObject):
     birthyear = IntCol()
     user = StringCol()
     sex = StringCol()
-    analyzed = StringCol(sqlType='LONGTEXT')
 
 class User(SQLObject):
 

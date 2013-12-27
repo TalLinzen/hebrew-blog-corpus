@@ -1,5 +1,6 @@
 import codecs, os, shelve
 from datetime import datetime
+import cPickle as pickle
 import xlwt
 from .conf import analyzed_corpus_dir, data_dir
 
@@ -21,6 +22,7 @@ def fast_frequency_index():
     
     words = {}
     lemmas = {}
+    base_forms = {}
 
     for subdir in sorted(os.listdir(analyzed_corpus_dir), key=int):
         print datetime.now().ctime(), subdir
@@ -34,11 +36,14 @@ def fast_frequency_index():
                     word, prefix, base, suffix, lemma, rest = line.split(' ', 5)
                     words[word] = words.get(word, 0) + 1
                     lemmas[lemma] = lemmas.get(lemma, 0) + 1
-                    #r.incr('w|' + word)
-                    #r.incr('l|' + lemma)
+                    base_forms[base] = base_forms.get(base, 0) + 1
 
-    print datetime.now().ctime(), "Dumping word frequency shelf"
-    words_shelf = shelve.open(os.path.join(data_dir, 'word_frequency'))
-    words_shelf.update(words)
-    print datetime.now().ctime(), "Dumping lemma frequency shelf"
-    lemmas_shelf = shelve.open(os.path.join(data_dir, 'lemma_frequency'))
+    print datetime.now().ctime(), "Dumping word frequency map"
+    words_file = open(os.path.join(data_dir, 'word_frequency.pkl'), 'w')
+    pickle.dump(words, words_file)
+    print datetime.now().ctime(), "Dumping lemma frequency map"
+    lemmas_file = open(os.path.join(data_dir, 'lemma_frequency.pkl'), 'w')
+    pickle.dump(lemmas, lemmas_file)
+    print datetime.now().ctime(), "Dumping base form frequency map"
+    base_file = open(os.path.join(data_dir, 'base_frequency.pkl'), 'w')
+    pickle.dump(base_forms, base_file)

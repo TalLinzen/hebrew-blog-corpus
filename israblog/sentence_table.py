@@ -1,7 +1,9 @@
 from .conf import analyzed_corpus_dir
 from .db import Sentence
-import os, codecs
+import os, codecs, bsddb3
 from datetime import datetime
+
+bsddb = bsddb3.hashopen('/Users/tal/corpus/bsddb/bsd.db')
 
 def process_dir(directory):
     files = [x for x in os.listdir(directory) if x.isdigit()]
@@ -12,8 +14,6 @@ def process_dir(directory):
         if os.path.isdir(path):
             process_dir(path)
         else:
-            if int(filename) < 92405:
-                continue
             if int(filename) % 100 == 0:
                 print datetime.now().ctime(), filename
             process_file(path)
@@ -30,12 +30,16 @@ def process_file(path):
         nextpos = s.find(u'\n \n', pos)
         if nextpos == -1:
             nextpos = len(s)
-        text = s[pos:nextpos].strip()
+        text = s[pos:nextpos].strip().encode('utf8')
         pos = nextpos + 2
 
         if text != '':
-            Sentence(webpage_id=int(filename), sentence_id=sentence_index,
-                    data=text.encode('utf8'))
+            # Use mysql table:
+            # Sentence(webpage_id=int(filename), sentence_id=sentence_index,
+            #        data=text)
+
+            # Use bsddb:
+            bsddb['%s_%s' % (int(filename), sentence_index)] = text
 
         sentence_index += 1
 

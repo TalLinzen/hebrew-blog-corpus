@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 from filter import Filter
-from .tools.hspell import infinitives
+from hbc.tools.hspell import infinitives
 import unittest
 
 builtin_predicates = ['is_obstructor', 'anything']
 
-predicate_factories = ['equal', 'not_equal', 'one_of', 'not_one_of', 'store',
-        'remove']
+predicate_factories = ['equal', 'not_equal', 'one_of', 'not_one_of',
+    'store', 'remove']
 
-predicate_modifiers = ['Once', 'And', 'Or', 'ZeroWidth', 'Conditional',
-        'Repeated', 'AnyNumberOf', 'Optional']
+predicate_modifiers = ['Once', 'And', 'Or', 'ZeroWidth', 'Conditional', 
+'Repeated', 'AnyNumberOf', 'Optional']
 
-__all__ = builtin_predicates + predicate_factories + predicate_modifiers + \
-        ['ParsingFilter']
+__all__ = (builtin_predicates + predicate_factories + 
+        predicate_modifiers + ['ParsingFilter'])
 
 clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
@@ -155,7 +155,8 @@ class Not(PredicateModifier):
 
 class ZeroWidth(PredicateModifier):
     '''
-    Match word without moving to next word. Can be used to manipulate state.
+    Match word without moving to next word. Can be used to manipulate 
+    state.
     '''
     def parse(self, index, sentence, state):
         matched = self.predicate(sentence.rich_words[index], state)

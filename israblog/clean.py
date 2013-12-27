@@ -142,7 +142,7 @@ class IsrablogCleaner(object):
         string = self.dots.sub(r' \1 ', string)
         return string
     
-    def dump_to_files(self, object, dir='/home/tal/corpus/clean_text',
+    def dump_to_files(self, object, dir='/Users/tal/corpus/clean_text',
             prepare_for_tokenizer=True):
         thousand_dir = os.path.join(dir, str(object.id // 1000))
         if not os.path.isdir(thousand_dir):
