@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 from hbc.filters.dative import PossessiveDativeOneWord, GenitiveOneWord, \
         QuickDativePredicatesClass
-from hbc.filters.count_lemmas import CountLemmas
 from hbc.annotation import ByAttributeAnnotation
-from hbc.io import BGUFile, BGUDir
+from hbc.io import BGUDir
 import os, csv, codecs
 from collections import Counter
 
