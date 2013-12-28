@@ -7,12 +7,13 @@ import os
 
 import xlwt
 
-from hbc.filters.count_lemmas import CountLemmas
+from hbc.conf import data_dir
 from hbc.io import BGUDir
+from hbc.filters.count_lemmas import CountLemmas
 
 def _count_lemmas_example(f):
     def res():
-        d = BGUDir(os.path.expanduser("~/data/hbc_analyzed/5"))
+        d = BGUDir(os.path.join(os.environ['HBC_PATH'], '5'))
         cl = f()
         cl.process_many(d)
         return cl
@@ -32,7 +33,7 @@ def count_lemmas_with_pos():
 
 def most_common_by_pos(how_many=5000):
     interesting_pos = ['adjective', 'adverb', 'noun', 'verb']
-    d = BGUDir(os.path.expanduser("~/data/hbc_analyzed"))
+    d = BGUDir(os.environ['HBC_PATH'])
     clpos = CountLemmas(lemmas=None, fields=['pos', 'lemma'])
     clpos.process_many(d)
 
@@ -40,9 +41,6 @@ def most_common_by_pos(how_many=5000):
     group_iter = itertools.groupby(items, lambda x: x[0][0])
     d = {pos: collections.Counter(dict(positems)) for 
          pos, positems in group_iter}
-
-    filename = os.path.abspath(__file__)
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(filename)), 'data')
 
     wb = xlwt.Workbook()
     for pos in interesting_pos:

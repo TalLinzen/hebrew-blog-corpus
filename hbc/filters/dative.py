@@ -1,16 +1,17 @@
-#   -*- coding: utf-8 -*-
-from parsing_filter import *
-from hbc.tools.hspell import infinitives
+# -*- coding: utf-8 -*-
 from hbc.data.word_lists import pd_verbs, possession_black_list
+from hbc.filters.parsing_filter import *
+from hbc.tools.hspell import infinitives
 
 clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
-clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
+clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם',
+                        u'הן']
 lamed_fused_forms = [u'ל' + form for form in clitic_forms_special]
 lamed_fused_forms += [u'ו' + x for x in lamed_fused_forms]
 lamed_reflexive_fused_forms = [u'לעצמ' + form for form in clitic_forms]
 lamed_reflexive_fused_forms += [u'ו' + x for x in lamed_reflexive_fused_forms]
-lamed_quasi_pronouns = (lamed_reflexive_fused_forms +
-        [u'לאנשים', u'לדברים', u'לזה'])
+lamed_quasi_pronouns = (lamed_reflexive_fused_forms + 
+                        [u'לאנשים', u'לדברים', u'לזה'])
 lamed_quasi_pronouns += [u'ו' + x for x in lamed_quasi_pronouns]
 shel_fused_forms = set([u'של' + form for form in clitic_forms_special])
 
@@ -44,11 +45,11 @@ false_datives = [
 ]
 
 def is_dative(word, filter_infinitives=True):
-    dative = word.pos == 'noun' and \
-                word.lemma not in false_datives and \
-                word.prefix in (u'ל', u'ול') \
-                or word.lemma == u'ל' \
-                or word.base in lamed_fused_forms
+    dative = (word.pos == 'noun' and 
+              word.lemma not in false_datives and 
+              word.prefix in (u'ל', u'ול') or 
+              word.lemma == u'ל' or 
+              word.base in lamed_fused_forms)
             # Last test is in theory redundant but works around
             # disambiguation errors
     if filter_infinitives:
@@ -58,8 +59,8 @@ def is_dative(word, filter_infinitives=True):
 
 def is_dative_wrapped(word, state):
     if is_dative(word):
-        if (word.word in lamed_fused_forms or
-                word.word in lamed_reflexive_fused_forms):
+        if (word.word in lamed_fused_forms or 
+            word.word in lamed_reflexive_fused_forms):
             state['argument'] = 'pronoun'
             return True
         elif word.word in lamed_quasi_pronouns:
@@ -70,14 +71,14 @@ def is_dative_wrapped(word, state):
             return True
 
 class YeshDative(ParsingFilter):
-    predicates = [
+    predicates = [ 
         one_of('word', (u'יש', u'אין'), export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
     ]
 
 benefactive_verbs = (u'אפה', u'הכין', u'צייר', u'ארגן', u'בישל')
 class Ditransitives(ParsingFilter):
-    predicates = [
+    predicates = [ 
         one_of('lemma', benefactive_verbs, export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
     ]
@@ -102,15 +103,15 @@ def QuickDativePredicatesClass(p):
 
 class MiraDatives(ParsingFilter):
     predicates = [
-        one_of('lemma', governed_verbs + benefactive_verbs +
-            pd_verbs_short + transfer_verbs, export_field='lemma'),
+        one_of('lemma', governed_verbs + benefactive_verbs + 
+               pd_verbs_short + transfer_verbs, export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
     ]
 
 class EthicalDatives(ParsingFilter):
     predicates = [
-        one_of('lemma', (u'קיטר', u'התבכיין', u'התיפיף', u'נרדם'),
-            export_field='lemma'),
+        one_of('lemma', (u'קיטר', u'התבכיין', u'התיפיף', u'נרדם'), 
+               export_field='lemma'),
         Once(is_dative_wrapped, highlight=True)
     ]
 
@@ -121,14 +122,14 @@ def lucene_dative_topicalized(verbs, extra_query=''):
 
     after=True: dative should be after verb
     '''
-    from .io import BGULuceneSearch
+    from hbc.io import BGULuceneSearch
 
     class Filt(ParsingFilter):
         predicates = [
                 not_equal('pos', 'verb'), 
                 Once(is_dative_wrapped, highlight=True),
                 AnyNumberOf(equal('chunk', 'I-NP')),
-                And(one_of('lemma', verbs, export_field='lemma'),
+                And(one_of('lemma', verbs, export_field='lemma'), 
                     equal('prefix', '_'))
             ]
 
@@ -211,8 +212,8 @@ def is_the_expected_preposition(word, state):
         return False
 
     expected_prepositions = pd_verbs[state['verb']]
-    match = len(set((word.lemma, word.prefix)) & \
-            set(expected_prepositions)) > 0
+    match = (len(set((word.lemma, word.prefix)) & 
+                 set(expected_prepositions)) > 0)
     return match
 
 def store_possessum(word, state):
@@ -294,7 +295,7 @@ class GenitiveOneWord(Genitive):
     genitive = [
         Once(is_shel),
         Conditional(equal('chunk', 'I-NP'), 
-            lambda s: s['argument'] == 'lexical'),
+                    lambda s: s['argument'] == 'lexical'),
         ZeroWidth(not_equal('chunk', 'I-NP')),
         ZeroWidth(not_equal('prefix', u'ש'))
     ]

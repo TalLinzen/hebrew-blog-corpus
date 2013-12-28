@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
+from StringIO import StringIO
+import codecs
+import logging
+import os
+
 try:
     from sqlobject.main import SQLObject
     from db import User
 except ImportError:
     pass
 
-from StringIO import StringIO
-import codecs, os
-from datetime import datetime
-from conf import analyzed_corpus_dir
+from hbc import conf
+from hbc.tools.progress_bar import ProgressBar
 
-declaration = 'word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk'.split()
+logger = logging.getLogger(__name__)
+
+declaration = ('word prefix base suffix lemma pos postype gender number '
+               'construct polarity tense person def pconj pint pprep psub '
+               'ptemp prb suftype sufgen sufnum sufperson chunk'.split())
 
 class BGUWord(object):
     
@@ -24,8 +32,8 @@ class BGUWord(object):
             line = line[1:]
         splitted_line = line.split(sep)
         if len(declaration) < len(splitted_line):
-            raise ValueError('Declaration too short to parse line: %s' % \
-                    repr(line))
+            raise ValueError('Declaration too short to parse line: %s' % 
+                             repr(line))
         for feature, value in map(None, declaration, splitted_line):
             if feature != 'word' and feature != 'base' and feature != 'lemma':
                 if value == '_':
@@ -35,25 +43,29 @@ class BGUWord(object):
                 elif value == 'f':
                     value = False
             setattr(word, feature, value)
-        # Hack because of bug:    
+        # Hack because of bug in BGUTagger (or in BGUTagger documentation):    
         word.tense, word.person = word.person, word.tense
         return word
 
-# word prefix base suffix lemma pos postype gender number construct polarity tense person def pconj pint pprep psub ptemp prb suftype sufgen sufnum sufperson chunk
     @classmethod
     def from_tokenfeat_optimized(cls, line):
         word = cls()
         splitted_line = line.strip().split()
-        word.word, word.prefix, word.base, word.suffix, word.lemma, word.pos, word.postype, word.gender, word.number, word.construct, word.polarity, word.tense, word.person, word.def_, word.pconj, word.pint, word.pprep, word.psub, word.ptemp, word.prb, word.suftype, word.sufgen, word.sufname, word.sufperson, word.chunk = splitted_line
+        (word.word, word.prefix, word.base, word.suffix, word.lemma, word.pos, 
+         word.postype, word.gender, word.number, word.construct, word.polarity,
+         word.tense, word.person, word.def_, word.pconj, word.pint, word.pprep,
+         word.psub, word.ptemp, word.prb, word.suftype, word.sufgen,
+         word.sufname, word.sufperson, word.chunk) = splitted_line
         word.tense, word.person = word.person, word.tense
         setattr(word, 'def_', word.def_)
         return word
 
     def __repr__(self):
-        return "<word='%s' pos='%s' prefix='%s' lemma='%s' base='%s' chunk='%s'>" % \
-                tuple([x.encode('utf8') if x is not None else '' for x in \
-                (self.word, self.pos, self.prefix, self.lemma,
-                    self.base, self.chunk)])
+        fields = (self.word, self.pos, self.prefix, self.lemma, self.base,
+                  self.chunk)
+        return ("<word='%s' pos='%s' prefix='%s' lemma='%s' base='%s' "
+                "chunk='%s'>" % tuple([x.encode('utf8') if x is not None 
+                                       else '' for x in fields]))
 
 class BGUSentence(object):
 
@@ -116,12 +128,10 @@ class BGUAbstractFile(object):
         return sentence
 
 def BGUFile(filename, *args):
-
     handle = codecs.open(filename, encoding='utf8')
     return BGUAbstractFile(handle, *args)
 
 def BGUString(string):
-
     if string is None or len(string) == 0:
         return []
     if string[-1] == '\xd7':
@@ -130,15 +140,13 @@ def BGUString(string):
 
 
 def BGUDir(directory):
-
     files = sorted((x for x in os.listdir(directory) if x.isdigit()), key=int)
-    for filename in files:
-
+    progress_bar = ProgressBar(len(files), mesg=directory)
+    for i, filename in enumerate(files):
+        progress_bar.update(i + 1)
         full_filename = os.path.join(directory, filename)
-
         generator = None
         if os.path.isdir(full_filename):
-            print '%s - Recursing into %s' % (datetime.now(), full_filename)
             generator = BGUDir(full_filename)
         elif filename[0] != '.':
             generator = BGUFile(full_filename)
@@ -147,6 +155,7 @@ def BGUDir(directory):
             for sentence in generator:
                 sentence.metadata.setdefault('filename', []).append(filename)
                 yield sentence
+    progress_bar
 
 def BGUQuery(sqlobject_query):
 
@@ -155,7 +164,7 @@ def BGUQuery(sqlobject_query):
 
     for result in sqlobject_query:
         webpage_id = result.id
-        filename = os.path.join(analyzed_corpus_dir, 
+        filename = os.path.join(os.environ['HBC_PATH'],
                 str(webpage_id / 1000), str(webpage_id))
         for sentence in BGUFile(filename):
             sentence.metadata['webpage_id'] = webpage_id
@@ -176,7 +185,7 @@ def BGUQueries(sqlobject_queries, limit=None, distribute=False):
     if limit and distribute:
         query_limit = limit / n_queries
     for query_index, query in enumerate(sqlobject_queries):
-        print '%d out of %d' % (query_index, n_queries)
+        logger.info('%d out of %d' % (query_index, n_queries))
         for sentence_index, sentence in enumerate(BGUQuery(query)):
             yield sentence
             if limit and global_sentence_index == limit - 1:
@@ -202,8 +211,10 @@ def BGULuceneSearch(query_string):
         doc = result.doc
         filename = filename_cache[doc]
         sentence_id = sentence_index_cache[doc]
-        contents = queryAll('select data from sentence where webpage_id = %d and sentence_id = %d' %
-                (int(filename), int(sentence_id)))[0][0].decode('utf8')
+        q = ('select data from sentence where webpage_id = %d '
+             'and sentence_id = %d')
+        contents = queryAll(q % (int(filename),
+                                 int(sentence_id)))[0][0].decode('utf8')
         words = []
         for line in contents.strip().split('\n'):
             try:

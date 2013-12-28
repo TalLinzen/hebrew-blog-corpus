@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+import codecs
+import os
 
-import codecs, os
 from hbc.conf import data_dir
 
 def csv_read(filename):

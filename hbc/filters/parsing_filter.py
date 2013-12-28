@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 from filter import Filter
-from hbc.tools.hspell import infinitives
 import unittest
 
 builtin_predicates = ['is_obstructor', 'anything']
 
-predicate_factories = ['equal', 'not_equal', 'one_of', 'not_one_of',
-    'store', 'remove']
+predicate_factories = ['equal', 'not_equal', 'one_of', 'not_one_of', 'store',
+                       'remove']
 
 predicate_modifiers = ['Once', 'And', 'Or', 'ZeroWidth', 'Conditional', 
-'Repeated', 'AnyNumberOf', 'Optional']
+                       'Repeated', 'AnyNumberOf', 'Optional']
 
-__all__ = (builtin_predicates + predicate_factories + 
-        predicate_modifiers + ['ParsingFilter'])
+__all__ = (builtin_predicates + predicate_factories + predicate_modifiers + 
+           ['ParsingFilter'])
 
-clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
-clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם', u'הן']
 debug = False
 
 ########
@@ -109,7 +106,6 @@ class PredicateModifier(object):
 
 
 class Once(PredicateModifier):
-
     def parse(self, index, sentence, state):
         matched = self.predicate(sentence.rich_words[index], state)
         if matched:
@@ -122,7 +118,6 @@ class PredicateCombination(PredicateModifier):
         self.predicates = predicates
 
 class And(PredicateCombination):
-
     def parse(self, index, sentence, state):
         matched = True
         for predicate in self.predicates:
@@ -134,7 +129,6 @@ class And(PredicateCombination):
         return matched, index
         
 class Or(PredicateCombination):
-
     def parse(self, index, sentence, state):
         matched = False
         for predicate in self.predicates:
@@ -149,7 +143,6 @@ class Not(PredicateModifier):
     '''
     Does is make sense to modify a state-changing predicate with Not?
     '''
-
     def parse(self, index, sentence, state):
         return not self.predicate(sentence.rich_words[index], state)
 
@@ -184,8 +177,8 @@ class Conditional(Once):
 class Repeated(PredicateModifier):
     unlimited = -1
 
-    def __init__(self, predicate, at_least=0, at_most=unlimited,
-            greedy=False, **options):
+    def __init__(self, predicate, at_least=0, at_most=unlimited, 
+                 greedy=False, **options):
         PredicateModifier.__init__(self, predicate, **options)
         self.at_least = at_least
         self.at_most = at_most
@@ -197,10 +190,10 @@ class Repeated(PredicateModifier):
 
         while index < len(sentence.rich_words):
             current_word = sentence.rich_words[index]
-            if not self.greedy and not state.lookahead and \
-                    next_predicate is not None:
-                if next_predicate.lookahead(index, sentence, state) \
-                        and index - original_index >= self.at_least:
+            if (not self.greedy and not state.lookahead and 
+                next_predicate is not None):
+                if (next_predicate.lookahead(index, sentence, state) and 
+                    index - original_index >= self.at_least):
                     break
 
             if not self.at_most == Repeated.unlimited:
@@ -225,12 +218,12 @@ class AnyNumberOf(Repeated):
     '''
     def __init__(self, predicate, greedy=False, **options):
         Repeated.__init__(self, predicate, at_least=0, 
-                at_most=Repeated.unlimited, greedy=greedy, **options)
+                          at_most=Repeated.unlimited, greedy=greedy, **options)
 
 class Optional(Repeated):
     def __init__(self, predicate, **options):
-        Repeated.__init__(self, predicate, greedy=True,
-                at_least=0, at_most=1, **options)
+        Repeated.__init__(self, predicate, greedy=True, at_least=0, at_most=1,
+                          **options)
 
 
 #################
@@ -292,13 +285,11 @@ class ParsingFilter(Filter):
             if predicate_index + 1 == len(local_predicates):
                 state['next_predicate'] = None
             else:
-                state['next_predicate'] = \
-                        local_predicates[predicate_index + 1]
+                state['next_predicate'] = local_predicates[predicate_index + 1]
 
             matched, index = predicate.parse(index, sentence, state)
 
             if matched:
-                #print '%d: %d -> %d' % (predicate_index, old_index, index)
                 predicate_index += 1
                 if predicate.options.get('highlight', False):
                     state['highlight'] = (old_index, index - 1)
@@ -306,7 +297,6 @@ class ParsingFilter(Filter):
                 if on_match:
                     on_match(sentence.rich_words[index - 1], state)
             else:
-                #print
                 last_index_outside_match += 1   # Rudimentary backtracking
                 index = last_index_outside_match
                 predicate_index = 0
@@ -315,8 +305,8 @@ class ParsingFilter(Filter):
             if predicate_index == len(local_predicates):
                 break
 
-        rest_are_zero = all(p.is_zero_length() for \
-                p in self.predicates[predicate_index:]) 
+        rest_are_zero = all(p.is_zero_length() for p in
+                            self.predicates[predicate_index:]) 
         if predicate_index == len(self.predicates) or rest_are_zero:
             keep_sentence = self.update_counts(state)
             self.post_process(sentence)
@@ -400,10 +390,10 @@ class Tests(unittest.TestCase):
                 s['b_after_2b'] = x == 'b'
                 return True
             predicates = [Repeated(eq('b'), 1, 1),
-                    ZeroWidth(set_state),
-                    Once(anything),
-                    Conditional(lambda x, s: x == 'c', 
-                        lambda s: s['b_after_2b'])]
+                          ZeroWidth(set_state),
+                          Once(anything),
+                          Conditional(lambda x, s: x == 'c',
+                                      lambda s: s['b_after_2b'])]
         self.assertTrue(TestFilter().process(self.sentence))
 
     def test_optional_no(self):
