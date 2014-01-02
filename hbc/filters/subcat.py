@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Author: Tal Linzen <linzen@nyu.edu>
+# License: BSD (3-clause)
+
 # Known bugs: 
 # * lo akkhish zot - "zot" not analyzed as NP, same for "harbe", "hamon",
 #   "klum", "hakol" with and without vav
@@ -123,9 +126,6 @@ class SubcategorizationFrames(Filter):
             l.append(self.sentence)
 
     def feed_word(self, word):
-        #if lemma == 'ali' and named_entity == 'I_PERS':    # specific hack
-        #    lemma, analysis, base_form, named_entity, np_chunk = ('ali', ['', 'IN', ''], 'al', 'O', 'O')
-
         is_verb = word.pos in ('verb', 'modal')
         if word.pos == 'participle' and word.lemma != word.word:
             is_verb = True
@@ -189,11 +189,11 @@ class SubcategorizationFrames(Filter):
                     else:
                         # Should be NP. Is it a probable direct object? 
                         # If definite, needs "at"
-                        if word.lemma == u'הוא' and \
-                                word.pos != 'at-preposition' or \
-                                word.pos == 'pronoun' or \
-                                getattr(word, 'def') and \
-                                word.base not in (u'הכל', u'הכול'):
+                        if (word.lemma == u'הוא' and 
+                            word.pos != 'at-preposition' or 
+                            word.pos == 'pronoun' or 
+                            getattr(word, 'def') and 
+                            word.base not in (u'הכל', u'הכול')):
                             self.ended_without_determined_object()
                         else:
                             self.argument_found('NP')
@@ -230,7 +230,6 @@ class SubcategorizationFrames(Filter):
         return preposition
 
     def ended_without_determined_object(self):
-
         self.punctuation_found = True
         if self.possibly_in_relative_clause or self.dangling_direct_object:
             self.argument_found('NONE(NP)')
@@ -240,51 +239,3 @@ class SubcategorizationFrames(Filter):
             self.argument_found('PP')
         else:
             self.argument_found('NONE')
-
-class DativeFinder(SubcategorizationFrames):
-
-    verbs_selecting_l = [u'נתן',
-            u'היה',
-            u'הראה',
-            u'בישר',
-            u'חסר',
-            u'נמאס',
-            u'האמין',
-            u'הודיע',
-            u'הבטיח',
-            u'הזכיר',
-            u'נדמה'
-            u'נראה',
-            u'מסר',
-            u'לקח',
-            u'העניק',
-            u'הסביר',
-            u'גילה',
-            u'קרה',
-            u'בא',
-            u'אמר',
-            u'תרם',
-            u'הציע',
-            u'נענה',
-            u'התרגל',
-            u'חיכה',
-            u'קנה',
-            u'הרשה',
-            u'העביר',
-            u'סיפר',
-            u'עזר',
-            u'הגיד',
-            u'החזיר']
-
-    def __init__(self):
-        SubcategorizationFrames.__init__(self, max_tokens=9999999)
-        self.dict = {'all': []}
-
-    def post_process(self):
-        if not hasattr(self.sentence, 'verb_index') or \
-                not hasattr(self.sentence, 'argument_type'):
-            return
-        verb_lemma = self.sentence.rich_words[self.sentence.verb_index].lemma
-        if self.sentence.argument_type == u'PP-ל' and \
-                verb_lemma not in self.verbs_selecting_l:
-            self.dict['all'].append(self.sentence)

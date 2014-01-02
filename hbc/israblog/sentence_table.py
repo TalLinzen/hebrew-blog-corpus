@@ -1,7 +1,9 @@
-from .conf import analyzed_corpus_dir
-from .db import Sentence
-import os, codecs, bsddb3
 from datetime import datetime
+import bsddb3
+import codecs
+import os
+
+from hbc.db import Sentence
 
 bsddb = bsddb3.hashopen('/Users/tal/corpus/bsddb/bsd.db')
 
@@ -44,4 +46,4 @@ def process_file(path):
         sentence_index += 1
 
 def build_sentence_table():
-    process_dir(analyzed_corpus_dir)
+    process_dir(os.environ['HBC_PATH'])

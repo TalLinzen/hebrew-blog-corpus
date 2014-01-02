@@ -1,4 +1,4 @@
-from .db import User
+from hbc.db import User
 
 def select_distinct(field, user):
     query = "select distinct %s from web_page where user='%s'" % (field, user)
@@ -24,9 +24,8 @@ def fill_user_table():
         sexes = select_distinct('sex', user)
         sex = sexes[0] if len(sexes) != 0 else None
 
-        chars = User._connection.queryAll(
-                "select sum(length(clean_text)) "
-                "from web_page where user='%s'" % user)
+        chars = User._connection.queryAll("select sum(length(clean_text)) from" 
+                                          " web_page where user='%s'" % user) 
         chars = int(chars[0][0])
         User(number=user, age=age, sex=sex, chars=chars, birthyear=birthyear)
 

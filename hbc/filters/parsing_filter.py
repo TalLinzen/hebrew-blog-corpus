@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+
+# Author: Tal Linzen <linzen@nyu.edu>
+# License: BSD (3-clause)
+
 from filter import Filter
 import unittest
 
@@ -140,9 +144,6 @@ class Or(PredicateCombination):
         return matched, index
         
 class Not(PredicateModifier):
-    '''
-    Does is make sense to modify a state-changing predicate with Not?
-    '''
     def parse(self, index, sentence, state):
         return not self.predicate(sentence.rich_words[index], state)
 

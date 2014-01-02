@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Author: Tal Linzen <linzen@nyu.edu>
+# License: BSD (3-clause)
+
 import codecs
 import collections
 import os

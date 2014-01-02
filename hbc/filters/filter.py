@@ -1,11 +1,15 @@
-import hashlib, copy
+# Author: Tal Linzen <linzen@nyu.edu>
+# License: BSD (3-clause)
+
+import copy
+import hashlib
 
 class Filter(object):
     '''
     Base class for filters.
 
     To create a filter, inherit from this class and implement the 'process'
-    method. This method should gets a single arguent, the sentence to process,
+    method. This method should get a single argument (the sentence to process),
     and return a boolean value: sentence passed or did not pass the filter.
     In addition it can modify the sentence's metadata dictionary.
     '''
@@ -16,7 +20,6 @@ class Filter(object):
         is strong -- another conceivable option would be to remove duplicates
         only if they are from the same user, etc.
         '''
-
         self.sentences = []
         self.running = True
         self.remove_duplicates = remove_duplicates
@@ -40,7 +43,6 @@ class Filter(object):
         filters that will process (copies of) the same sentences. The current
         filter will process the sentences no matter if it is in this list.
         '''
-
         filters = set([self])
         if other_filters is not None: 
             filters |= set(other_filters)
@@ -50,8 +52,8 @@ class Filter(object):
             for filt in filters:
                 if filt.running:
                     some_still_running = True
-                sentence_copy = (sentence.clone() if len(filters) > 1
-                        else sentence)
+                sentence_copy = (sentence.clone() if len(filters) > 1 
+                                 else sentence)
                 # Same words, but possibly eventually different metadata.
                 # Do that only if there's more than one filter
                 filt.process_and_record(sentence_copy)

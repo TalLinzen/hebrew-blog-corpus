@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
 # profile.run('execfile("lucene_index.py"); execfile("run.py"); setup_connection(""); build_index()')
 # initVM(); from AnalyzerUtils import AnalyzerUtils; AnalyzerUtils.displayTokensWithFullDetails(BlogCorpusAnalyzer(), open('/Users/tal/Dropbox/Hebrew-Blog-Corpus/experiments/t/1').read().replace(' ', '@'))
-import sys, os,  threading, time, codecs, lucene, zlib
+from datetime import datetime
+import codecs
+import lucene
+import os
+import sys
+import threading
+import time
+import zlib
+
 from lucene import \
     Document, Field, TermAttribute, TermAttribute, PositionIncrementAttribute, \
     WhitespaceTokenizer, SimpleFSDirectory, IndexSearcher, StandardAnalyzer, \
     Version, File, QueryParser, initVM, PythonTokenFilter, PythonAnalyzer, \
     IndexReader, IndexWriter, FieldCache
-from common import BlogCorpusAnalyzer, BlogCorpusFilter
-from datetime import datetime
-from db import WebPage, User
-from static_lz import trained_short_string_compressor
+
+from hbc.db import WebPage, User
+from hbc.lucene_index.common import BlogCorpusAnalyzer, BlogCorpusFilter
+from hbc.lucene_index.static_lz import trained_short_string_compressor
 
 index_dir = '/Users/tal/corpus/lucene_index_full'
 

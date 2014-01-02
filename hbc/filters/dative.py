@@ -1,7 +1,23 @@
 # -*- coding: utf-8 -*-
+
+# Author: Tal Linzen <linzen@nyu.edu>
+# License: BSD (3-clause)
+
 from hbc.data.word_lists import pd_verbs, possession_black_list
 from hbc.filters.parsing_filter import *
 from hbc.tools.hspell import infinitives
+
+'''
+Filters to find sentences with various types of dative verbs, as well as
+verbs with arguments that are a genitive phrase ("ordinary possession").
+For more details, see:
+
+Linzen, Tal (in press). Parallels between cross-linguistic and language-
+    internal variation in Hebrew possessive constructions. Linguistics.
+
+Ariel, Mira, Elitzur Dattner, John W. Du Bois, and Tal Linzen (under review).
+    Pronominal datives: The royal road to argument status.
+'''
 
 clitic_forms = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'ם', u'ן']
 clitic_forms_special = [u'י', u'ך', u'ו', u'ה', u'נו', u'כם', u'כן', u'הם',
@@ -27,9 +43,9 @@ class Bishvil(ParsingFilter):
             state['argument'] = 'pronoun'; return True
 
     def not_conjunction(word, state):
-        good = word.tense != 'inf' and \
-                (word.prefix is None or u'ש' not in word.prefix) and \
-                word.word not in infinitives
+        good = (word.tense != 'inf' and
+                (word.prefix is None or u'ש' not in word.prefix) and 
+                word.word not in infinitives)
         return good
 
     predicates = [
@@ -37,21 +53,25 @@ class Bishvil(ParsingFilter):
         not_conjunction
     ]
 
-false_datives = [
-    u'רגע',
-    u'כבוד',
-    u'צד',
-    u'הנאה'
-]
 
 def is_dative(word, filter_infinitives=True):
+    '''
+    Test if word made up of the preposition "le" + noun, excluding some common
+    idioms. Potentially also exclude infinitives to reduce errors.
+    '''
+    false_datives = [
+        u'רגע',
+        u'כבוד',
+        u'צד',
+        u'הנאה'
+    ]
     dative = (word.pos == 'noun' and 
               word.lemma not in false_datives and 
               word.prefix in (u'ל', u'ול') or 
               word.lemma == u'ל' or 
               word.base in lamed_fused_forms)
-            # Last test is in theory redundant but works around
-            # disambiguation errors
+    # Last test is in theory redundant but works around
+    # disambiguation errors
     if filter_infinitives:
         return dative and word.word not in infinitives 
     else:
@@ -101,7 +121,7 @@ def QuickDativePredicatesClass(p):
         ]
     return Class
 
-class MiraDatives(ParsingFilter):
+class ArielEtAlDatives(ParsingFilter):
     predicates = [
         one_of('lemma', governed_verbs + benefactive_verbs + 
                pd_verbs_short + transfer_verbs, export_field='lemma'),
@@ -158,14 +178,14 @@ class YeshAfterDative(ParsingFilter):
 
 class NatanDative(ParsingFilter):
     # Annotate by 'argument'
-    predicates = [
-            equal('lemma', u'נתן'),
-            Once(is_dative_wrapped, highlight=True),
-            AnyNumberOf(equal('chunk', 'I-NP')),
-            one_of('chunk', ['B-NP', 'I-NP']),
-            AnyNumberOf(equal('chunk', 'I-NP')),
-            not_one_of('word', infinitives)
-        ]
+    predicates = [ 
+        equal('lemma', u'נתן'),
+        Once(is_dative_wrapped, highlight=True),
+        AnyNumberOf(equal('chunk', 'I-NP')),
+        one_of('chunk', ['B-NP', 'I-NP']),
+        AnyNumberOf(equal('chunk', 'I-NP')),
+        not_one_of('word', infinitives)
+    ]
 
 def is_preposition(word, state):
     clitic_prepositions = set([
@@ -264,6 +284,10 @@ class PossessiveDativeWithPronoun(PossessiveDative):
 
 class PossessiveDativeOneWord(PossessiveDative):
     dative = Once(is_dative_wrapped, highlight=True)
+
+##########
+# Genitive
+##########
 
 class Genitive(ParsingFilter):
     private = ['in_chunk']
